@@ -38,7 +38,8 @@ namespace evil {
 		SERVER,
 		CHANNEL,
 		COUNT };
-	map<Config, const char*> configmatch;
+	map<Config, string> configmap;
+	vector<string *> matchvector;
 	string *config[COUNT] = { new string };
 		
 	std::fstream log;
@@ -55,17 +56,21 @@ namespace evil {
 
 int main(int argc, char** argv) {
 	
-	map_init( evil::configmatch )
-		(evil::VERBOSE, "verbose")
-		(evil::SERVER, "server")
-		(evil::CHANNEL, "channel")
-	;
+	map_init( evil::configmap )
+		(evil::VERBOSE, string("verbose") )
+		(evil::SERVER, string("server") )
+		(evil::CHANNEL, string("channel") )	;
+	
+	for( map<evil::Config, string>::iterator it = evil::configmap.begin();
+		it != evil::configmap.end(); ++it ) {
+    	evil::matchvector.push_back( &it->second );
+    }
 
 	evil::log.open("whatwassaid.txt", ios::out);
 	
-	EVILLOG("-~=. Evil TTS Bot .=~-")
+	EVILLOG("          -~=. `Evil` IRC TTS Bot .=~-" << LFCR)
 	
-	//EVILLOG("Hi");
+	EVILLOG("Hi");
 	
 	while ( true ) {
 		if ( argc < 2 ) {
@@ -75,7 +80,10 @@ int main(int argc, char** argv) {
 			evil::mapargs(argc, argv);
 
 			if ( ! evil::hasminimuminfo() ) {
-				EVILLOG("Evil does not have enough information to start listening")
+				EVILLOG("")
+				EVILLOG("=============================================================")
+				EVILLOG("Not enough arguments to start operating on your IRC")
+				EVILLOG("=============================================================")
 				break;
 			}
 
@@ -98,39 +106,61 @@ void evil::mapargs(int argc, char** argv) {
 	for (int i = 1; i < argc; ++i) {
 		const char *v = argv[i];
 		string s(v+1);
-
-		EVILLOG("parsing arg: " << v)
-
+		
 		if ( '-' != v[0] ) {
-			EVILLOG("argument should start with -, ignored: " << v)
+			EVILLOG("ignored argument: " << v << " (missing dash -)")
 			continue;
 		}
 
 		std::size_t found = s.find_first_of( "=", 1 );
 		
-		string *l = nullptr;
-		string *r = nullptr;
+		string *l = new string();
+		string *r = new string();
 		if ( string::npos != found ) {
-			l = new string( s.substr(0, found) );
+			l->assign( s.substr(0, found) );
 			r = new string( s.substr(found + 1, string::npos) );
 		}
 		else
-			l = new string(s.c_str() + 1);
+			l = new string(v + 1);
 		
-		if ( configmatch.find(l->c_str()) )
-			evil::argm.insert( pair<string *, string *>(l, r) );
+		{ //
+		bool match = false;
+		int i = 0;
+		for ( auto x : matchvector ) {
+			//EVILLOG("comparing " << l->c_str() << " to " << x->c_str() )
+			if ( 0 == l->compare(*x) ) {
+				match = true;
+				EVILLOG("provided " << v)
+				evil::config[i] = r;
+				break;
+			}
+			i ++;
+		}
+		
+
+		if ( ! match ) {
+			EVILLOG("unrecognized " << v)
+			continue;
+		}
+		} //
 	}
 }
 
 bool evil::hasminimuminfo() {
-	if ( nullptr != config[SERVER]  
-		
-		)
+	
+	if ( ! config[SERVER] ) {
+		EVILLOG( "missing -server argument: " );
 		return false;
-		
-	//string *server = config.find( SERVER );
-	//EVILLOG()
-	return true;
+	}
+	
+	else if ( ! config[CHANNEL] ) {
+		EVILLOG( "missing -channel argument" );
+		return false;
+	}
+
+	else
+		return true;
+	
 }
 
 //int 

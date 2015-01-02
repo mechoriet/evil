@@ -1,10 +1,9 @@
--~=. Evil TTS Bot .=~-
-parsing arg: -server=value
-parsing arg: -channel=cool
-parsing arg: cool
-argument should start with -, ignored: cool
-parsing arg: -verbose
-parsing arg: -awesome=enabled
-Evil does not have enough information to start listening
+          -~=. `Evil` IRC TTS Bot .=~-
+
+Hi
+Running evil.exe without arguments :(
+Use the following arguments:
+-server=ip or dns
+--------------------------------------
 
 press key to die
