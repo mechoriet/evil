@@ -1,0 +1,6 @@
+parsing arg: -key=value
+parsing arg: cool
+argument should start with -, ignored: cool
+parsing arg: -verbose
+parsing arg: -awesome=enabled
+press key to die

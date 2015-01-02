@@ -1,18 +1,22 @@
 # build with winbuilds mingw-w64
 
 FLAGS = -DSFML_STATIC
-PREQS = -winmm -lws2_32 -sndfile -openal32
-SFML = -sfml-system-s -sfml-network-s -sfml-audio-s
+SFML_DEPS = -lwinmm -lws2_32 -lsndfile -lopenal32
+SFML = -lsfml-system-s -lsfml-network-s -lsfml-audio-s
 FLAGS = -std=c++0x
+
 O = o/main.o
-INCL = -IQ:/SFML-2.2/include
+INCL = -IQ:/SFML-2.2/include -IQ:/libircclient-1.8/include
+	
+##LIRC = -LQ:\libircclient-1.8\bin\
+#lIRC = -lircclient
 
 all: evil.exe
 
 
-	
+#$(LIRC) $(lIRC)
 evil.exe: $(O)
-	g++ $(O) -LQ:/SFML-2.2/lib -lwinmm -static-libgcc -static-libstdc++ -o evil -Wall
+	g++ $(O)  $(SFML) $(SFML_DEPS) -LQ:/SFML-2.2/lib -static-libgcc -static-libstdc++ -o evil -Wall
 
 o/main.o: main.cpp
 	g++ $(INCL) -c main.cpp -o o/main.o $(FLAGS)

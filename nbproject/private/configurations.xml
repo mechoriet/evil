@@ -4,7 +4,9 @@
     <df root="." name="0">
       <df name="o">
       </df>
+      <in>auxiliary.cpp</in>
       <in>main.cpp</in>
+      <in>whatwassaid.txt</in>
     </df>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
