@@ -33,11 +33,13 @@ using namespace std;
 
 
 namespace evil {
-	/*enum Valids {
+	enum Config {
 		VERBOSE,
 		SERVER,
-		CHANNEL };
-	map<Valids, const char*> valids;*/
+		CHANNEL,
+		COUNT };
+	map<Config, const char*> configmatch;
+	string *config[COUNT] = { new string };
 		
 	std::fstream log;
 	void parseserver();
@@ -45,90 +47,90 @@ namespace evil {
 	//static const char *valids[] = {"-server", "-channel"};
 	int matchvalid();
 	map<string *, string *> argm;
+	void mapargs(int, char **);
+	bool hasminimuminfo();
 	//extern validArgs
 }
 
 
-    //(CHANNEL, "B")
-    //(VERBOSE, "C")
-;
-
-//const vector<evil::validArgs> = {"Cool", "Cool"};
-
 int main(int argc, char** argv) {
 	
-	/*map_init( evil::valids )
-		(evil::Valids::VERBOSE, "-verbose")
-		(evil::Valids::SERVER, "-server=")
-		(evil::Valids::SERVER, "-channel=")
-	;*/
+	map_init( evil::configmatch )
+		(evil::VERBOSE, "verbose")
+		(evil::SERVER, "server")
+		(evil::CHANNEL, "channel")
+	;
 
 	evil::log.open("whatwassaid.txt", ios::out);
 	
+	EVILLOG("-~=. Evil TTS Bot .=~-")
+	
 	//EVILLOG("Hi");
 	
-	if ( argc < 2 ) {
-		EVILLOG(EVIL_HELP)}
-	
-	else {
-		
-		for (int i = 1; i < argc; ++i) {
-			const char *v = argv[i];
-			string s(v+1);
-			
-			EVILLOG("parsing arg: " << v)
-			
-			if ( '-' != v[0] ) {
-				EVILLOG("argument should start with -, ignored: " << v)
-				continue;
+	while ( true ) {
+		if ( argc < 2 ) {
+			EVILLOG(EVIL_HELP)}
+
+		else {
+			evil::mapargs(argc, argv);
+
+			if ( ! evil::hasminimuminfo() ) {
+				EVILLOG("Evil does not have enough information to start listening")
+				break;
 			}
+
 			
-			std::size_t found = s.find_first_of( "=", 1 );
-			
-			string *l = nullptr;
-			string *r = nullptr;
-			if ( string::npos != found ) {
-				l = new string( s.substr(0, found) );
-				
-				r = new string( s.substr(found + 1, string::npos) );
-			}
-			else {
-				l = new string(s.c_str() + 1);
-			}
-			
-			evil::argm.insert( pair<string *, string *>(l, r) );
-			
-			//evil::argm.insert( pair<const char *, string *>("server", nullptr) );
-			//else {
-			//	string k();
-			//}
-			
-			//evil::argm[k->c_str()];
-			//if (  )
-			//if ( )
-			/*
-#define SAME 0
-			if
-			( SAME == strcmp("-server", v) ) {
-				//parseserver(v);
-			}
-			else if 
-			( SAME == strcmp("-channel", v) ) {
-				
-			}
-			else {
-				EVILLOG("!! Unrecognized Argument: " << v);
-			}*/
 		}
+		
+		break;
 	}
 	
 	// end of evil
-	EVILLOG("press key to die");
+	EVILLOG(LFCR << "press key to die");
 	cin.get();
 	
 	evil::log.close();
 	
 	return 0;
+}
+
+void evil::mapargs(int argc, char** argv) {
+	for (int i = 1; i < argc; ++i) {
+		const char *v = argv[i];
+		string s(v+1);
+
+		EVILLOG("parsing arg: " << v)
+
+		if ( '-' != v[0] ) {
+			EVILLOG("argument should start with -, ignored: " << v)
+			continue;
+		}
+
+		std::size_t found = s.find_first_of( "=", 1 );
+		
+		string *l = nullptr;
+		string *r = nullptr;
+		if ( string::npos != found ) {
+			l = new string( s.substr(0, found) );
+			r = new string( s.substr(found + 1, string::npos) );
+		}
+		else
+			l = new string(s.c_str() + 1);
+		
+		if ( configmatch.find(l->c_str()) )
+			evil::argm.insert( pair<string *, string *>(l, r) );
+	}
+}
+
+bool evil::hasminimuminfo() {
+	if ( nullptr != config[SERVER]  
+		
+		)
+		return false;
+		
+	//string *server = config.find( SERVER );
+	//EVILLOG()
+	return true;
 }
 
 //int 
