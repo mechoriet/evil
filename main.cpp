@@ -608,11 +608,6 @@ void evil::playtts(string &filename) {
 		return;
 	}
 	
-	
-	
-	
-		
-		
 	// get time of .mp3
 	double time;
 	QWORD len=BASS_ChannelGetLength(str, BASS_POS_BYTE); // the length in bytes
