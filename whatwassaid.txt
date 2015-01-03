@@ -11,4 +11,7 @@ unrecognized awesome
 The input is sufficient and syntactically correct. Starting...
 =============================================================
 
+getting .mp3 ...
+status: 200
+
 Press any key to hide

@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <cstring>
 #include <map>
@@ -23,7 +24,7 @@ using namespace std;
 	"Use the following arguments:" LFCR \
 	"-server=ip or dns" LFCR \
 	"--------------------------------------"
-#define EVILBAR "============================================================="
+#define EVILBAR LFCR << "=============================================================" << LFCR
 
 #define EVILLOG(QUOTE) \
 	std::cout << QUOTE << std::endl; \
@@ -59,7 +60,9 @@ namespace evil {
 	bool hasminimuminfo();
 	
 	void posttext(string &);
-	void getmp3url(string &);
+	void getmp3url(string &, string &, string&);
+	void test();
+	void writemp3(string &, sf::Http::Response &);
 	//extern validArgs
 }
 
@@ -80,17 +83,18 @@ int main(int argc, char** argv) {
 			evil::mapargs(argc, argv);
 
 			if ( ! evil::hasminimuminfo() ) {
-				EVILLOG(LFCR<<EVILBAR<<LFCR<<"Not enough arguments to start operating on your IRC"<<LFCR<<EVILBAR)
+				EVILLOG( EVILBAR << "Not enough arguments to start operating on your IRC" << EVILBAR )
 				break;
 			}
 
 			// CONTINUE AS NORMAL ^_^
 			
-			EVILLOG(LFCR<<EVILBAR<<LFCR<< "The input is sufficient and syntactically correct. Starting..."<<LFCR<<EVILBAR)
+			EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
-			string a = string("awesome");
+			string a = string("Holy shit yes bro");
 			evil::posttext( a );
 			
+			//evil::test();
 		}
 		
 		break;
@@ -115,7 +119,7 @@ void evil::mapargs(int argc, char** argv) {
 			continue;
 		}
 
-		std::size_t found = s.find_first_of( "=", 1 );
+		std::size_t found = s.find( "=", 1 );
 		
 		string *l = new string();
 		string *r = new string();
@@ -167,11 +171,16 @@ bool evil::hasminimuminfo() {
 
 void evil::posttext(string &quote) {
 
-	sf::Http http("http://www.acapela-group.com/");
+	stringstream post;
+	post << "MyLanguages=sonid10&MySelectedVoice=WillBadGuy&";
+	post << "MyTextForTTS=" << quote;
+	post << "&t=1&SendToVaaS=";
+	
+	sf::Http http("http://www.acapela-group.com");
+	
 	sf::Http::Request request;
 	request.setMethod(sf::Http::Request::Post);
 	request.setUri("/demo-tts/DemoHTML5Form_V2.php?langdemo=Powered+by+Acapela-vaas.com");
-	//request.setHttpVersion(1, 1); // HTTP 1.1
 	
 	request.setField("Host", "www.acapela-group.com");
 	request.setField("Connection", "keep-alive");
@@ -182,44 +191,116 @@ void evil::posttext(string &quote) {
 	request.setField("Accept-Encoding", "gzip, deflate");
 	request.setField("Accept-Language", "nl-NL,nl;q=0.8,en-US;q=0.6,en;q=0.4");
 	request.setField("Cache-Control", "max-age=0");
-	request.setBody("MyLanguages=sonid10&MySelectedVoice=WillBadGuy&MyTextForTTS=premonition+suns");
+	request.setBody( post.str() );
 	
+	EVILLOG("getting .html ...")
 	sf::Http::Response response = http.sendRequest(request);
 	
-	string a = string(response.getBody());
-	evil::getmp3url( a );
+	string html = string(response.getBody());
+	string cookie = response.getField("cookie");
+	
+	EVILLOG("cookie is " << cookie)
+	
+	evil::getmp3url( quote, html, cookie );
 	
 }
 
-void evil::getmp3url(string &html) {
-	std::size_t found = html.find_first_of( "var myPhpVar = '" );
+void evil::getmp3url(string &quote, string &html, string &cookie) {
+	//evil::log << html.c_str();
 	
-	if ( string::npos != found ) {
+	string startjs("var myPhpVar = '");
+	std::size_t start = html.find( startjs );
+	
+	if ( string::npos == start ) {
 		EVILLOG("No myPhpVar for some reason");
-		break;
+		return;
 	}
 	
-	std::size_t end = html.find(".mp3';", found);
-	string mp3url( html.substr(found))
+	string endjs(".mp3';");
+	std::size_t end = html.find(endjs, start);
 	
-	sf::Http http("194.158.21.231:8081");
+	// produce qualified .mp3 URL from raw HTML/JavaScript
+	int pos = start + startjs.length();
+	int len = (end + endjs.length()) - (start + startjs.length()+2);
+	string url( html.substr(pos, len) );
+	EVILLOG("mp3 url is: " << url.c_str() );
+	
+	// get host of .mp3 URL
+	std::size_t slash = url.find("/", 7);
+	string host( url.substr(7+pos, slash-(7+pos)) );
+	EVILLOG("host of mp3 is " << host)
+	string server("http://194.158.21.231:8081");
+	
+	// remove 'http://xx' from mp3 URL
+	url.assign( url.substr(server.length(), string::npos) );
+	
+	sf::Http http( server.c_str(), 8081 );
+	
+	EVILLOG("getting file: " << url << " from " << host)
+		
 	sf::Http::Request request;
-	request.setMethod(sf::Http::Request::Post);
-	request.setUri("/demo-tts/DemoHTML5Form_V2.php?langdemo=Powered+by+Acapela-vaas.com");
-	//request.setHttpVersion(1, 1); // HTTP 1.1
+	request.setMethod(sf::Http::Request::Get);
+	request.setUri( url.c_str() );
 
-	request.setField("Host", "www.acapela-group.com");
-	request.setField("Connection", "keep-alive");
 	request.setField("Accept", "*/*");
-	request.setField("Content-Type", "application/x-www-form-urlencoded");
-	request.setField("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36");
-	request.setField("Referer", "http://www.acapela-group.com/demo-tts/DemoHTML5Form_V2.php?langdemo=Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E");
+	request.setField("Accept-Encoding", "identity;q=1, *;q=0");
 	request.setField("Accept-Language", "nl-NL,nl;q=0.8,en-US;q=0.6,en;q=0.4");
-	request.setBody("MyLanguages=sonid10&MySelectedVoice=WillBadGuy&MyTextForTTS=premonition+suns");
+	request.setField("Cache-Control", "max-age=0");
+	request.setField("Connection", "keep-alive");
+	request.setField("Host", host.c_str() );
+	request.setField("Pragma", "no-cache");
+	//request.setField("Range", "bytes=0-");
+	request.setField("Referer", "http://www.acapela-group.com/demo-tts/DemoHTML5Form_V2.php?langdemo=Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E");
+	request.setField("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36");
+	request.setField("Cookie", cookie.c_str() );
 	
+	
+	EVILLOG("getting .mp3 ...")
 	sf::Http::Response response = http.sendRequest(request);
+	
+	EVILLOG("status: " << response.getStatus())
+		
+	evil::writemp3(quote, response);
+	
 }
 
-void parseserver() {
+/*
+void evil::test() {
+	sf::Http http( "194.158.21.231", 8081 );
+	sf::Http::Request request;
 	
+	request.setMethod(sf::Http::Request::Get);
+	request.setUri( "/MESSAGES/012099097112101108097071114111117112/AcapelaGroup_WebDemo_HTML/sounds/98576538_d8b66814dca07.mp3" );
+	
+	request.setHttpVersion(1, 1);
+	request.setField("Accept-Encoding", "identity;q=1, *;q=0");
+	request.setField("Accept-Language", "nl-NL,nl;q=0.8,en-US;q=0.6,en;q=0.4");
+	request.setField("Cache-Control", "max-age=0");
+	request.setField("Connection", "keep-alive");
+	request.setField("Host", "194.158.21.231:8081");
+	request.setField("Pragma", "no-cache");
+	//request.setField("Range", "bytes=0-");
+	// range gives partial response
+	
+	request.setField("Referer", "http://www.acapela-group.com/demo-tts/DemoHTML5Form_V2.php?langdemo=Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E");
+	request.setField("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36");
+	request.setField("Cookie", "PHPSESSID=1n67esiaifl8m2pj2n6khq2be3; qtrans_cookie_test=qTranslate+Cookie+Test; __utma=57132138.719638552.1420242028.1420242028.1420242028.1; __utmc=57132138; __utmz=57132138.1420242028.1.1.utmccn=(direct)|utmcsr=(direct)|utmcmd=(none)");
+	//request.setBody("");
+	
+	EVILLOG("getting .mp3 ...")
+	sf::Http::Response response = http.sendRequest(request);
+	
+	EVILLOG("status: " << response.getStatus())
+	
+	evil::writemp3(response);
+}
+
+
+void evil::writemp3(quote, sf::Http::Response &get) {
+	std::fstream mp3;
+	mp3.open("gets/mp3.mp3", ios::out | std::ios::binary);
+	
+	mp3 << get.getBody();
+	
+	mp3.close();
 }
