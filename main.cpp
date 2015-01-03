@@ -57,6 +57,15 @@ using namespace std;
 
 #include "auxiliary.cpp"
 
+/*
+ * We store data in IRC session context.
+ */
+typedef struct
+{
+	char 	* channel;
+	char 	* nick;
+
+} irc_ctx_t;
 
 namespace evil {
 	
@@ -97,6 +106,9 @@ namespace evil {
 	bool readjsonconfig();
 	
 	bool connecttoirc();
+	
+	irc_ctx_t ctx;
+	irc_session_t *ses;
 }
 
 
@@ -239,12 +251,21 @@ void dump_event (irc_session_t * session, const char * event, const char * origi
 		strcat (buf, params[cnt]);
 	}
 
+	EVILLOG("Event " << event << ", origin: " <<  (origin ? origin : "NULL") << "params: " << cnt << "[" << buf << "]");
 	//EVILLOG ("Event \"%s\", origin: \"%s\", params: %d [%s]", event, origin ? origin : "NULL", cnt, buf);
 }
 
-void event_connect (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count) {
-	EVILLOG("connected")
+
+void event_connect (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count)
+{
+	irc_ctx_t * ctx = (irc_ctx_t *) irc_get_ctx (session);
+	dump_event (session, event, origin, params, count);
+
+	irc_cmd_join (session, ctx->channel, 0);
+	
+	EVILLOG("connected");
 }
+
 
 void event_numeric (irc_session_t * session, unsigned int event, const char * origin, const char ** params, unsigned int count)
 {
@@ -252,8 +273,6 @@ void event_numeric (irc_session_t * session, unsigned int event, const char * or
 	sprintf (buf, "%d", event);
 
 	dump_event (session, buf, origin, params, count);
-	
-	EVILLOG("event numeric")
 }
 
 void event_channel (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count)
@@ -262,14 +281,18 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 
 	if ( count != 2 )
 		return;
+
+	const char *user = origin ? origin : "someone";
 	
-	// origin guy
-	// params[0] channel
-	// params[1] said
+	EVILLOG("'" << user << "' said in channel " << params[0] << ": " << params[1]);
 
-	const char *user = (origin ? origin : "someone");
-	EVILLOG("'" << user << "' said in channel "<<params[0]<<": " << params[1])
+}
 
+void event_join (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count)
+{
+	dump_event (session, event, origin, params, count);
+	irc_cmd_user_mode (session, "+i");
+	irc_cmd_msg (session, params[0], "Hi all");
 }
 
 bool evil::connecttoirc() {
@@ -280,10 +303,11 @@ bool evil::connecttoirc() {
 		EVILLOG("Missing IRC Setup Object in config .json")
 	}
 	
-	string server = IRCSetup.get("server", "N/A").asString();
+	string server = IRCSetup.get("server", "none :(").asString();
 	int port = IRCSetup.get("port", 6667).asInt();
-	string username = IRCSetup.get("username", "N/A").asString();
-	string password = IRCSetup.get("password", "N/A").asString();
+	string channel = IRCSetup.get("channel", "N/A").asString();
+	string username = IRCSetup.get("username", "not provided").asString();
+	string password = IRCSetup.get("password", "0").asString();
 	
 	WSADATA wsaData;
 
@@ -300,27 +324,35 @@ bool evil::connecttoirc() {
 
 	// Set up the mandatory events
 	callbacks.event_connect = event_connect;
+	callbacks.event_join = event_join;
 	callbacks.event_numeric = event_numeric;
 	callbacks.event_channel = event_channel;
 
 	// Set up the rest of events
 
 	// Now create the session
-	irc_session_t * session = irc_create_session( &callbacks );
+	ses = irc_create_session( &callbacks );
 
-	if ( !session ) {
+	if ( !ses ) {
 		// Handle the error
 		EVILLOG("no session")
 		return false;
 	}
 	
-	if ( irc_connect (session, "irc.twitch.tv", 6667, "oauth:4ncjgy8qgtao8mc3vh9a09ww2bv9p9", "steerlat", "steerlat", "evil" ) ) {
-		EVILLOG("irc connect problem: " << irc_strerror(irc_errno(session)) << " code " << irc_errno(session) )
+	EVILLOG("channel is " << channel.c_str())
+	
+	ctx.channel = strdup(channel.c_str());
+	ctx.nick = strdup(username.c_str());
+	
+	irc_set_ctx (ses, &ctx);
+	
+	if ( irc_connect (ses, strdup(server.c_str()), 6667, strdup(password.c_str()), strdup(username.c_str()), strdup(username.c_str()), 0 ) ) {
+		EVILLOG("irc connect problem: " << irc_strerror(irc_errno(ses)) << " code " << irc_errno(ses) )
 		return false;
 	}
 	
-	if ( irc_run (session) ) {
-		EVILLOG("irc_run problem: " << irc_strerror(irc_errno(session)) << " code " << irc_errno(session) )
+	if ( irc_run (ses) ) {
+		EVILLOG("irc_run problem: " << irc_strerror(irc_errno(ses)) << " code " << irc_errno(ses) )
 		return false;
 	}
 	
