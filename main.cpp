@@ -22,11 +22,17 @@
 //#include <random>
 
 #include <SFML/Network.hpp>
-#include <SFML/Audio.hpp>
+//#include <SFML/Audio.hpp>
 
 #include "Q:/jsoncpp-master/include/json/json.h"
 #include <libircclient.h>
 #include <libirc_rfcnumeric.h>
+
+// bass includes
+#include "Q:/bass24/c/bass.h"
+#include <commctrl.h>
+#include <stdio.h>
+#include <math.h>
 
 
 using namespace std;
@@ -103,6 +109,7 @@ namespace evil {
 	void plusspaces(string &);
 	void sanitizequote(string &);
 	void stripuser(string &);
+	void playtts(string &);
 	//extern validArgs
 	
 	Json::Value midrash;
@@ -124,22 +131,29 @@ int main(int argc, char** argv) {
 	EVILLOG("Hi");
 	
 	while ( true ) {
-		if ( argc < 2 ) {
-			EVILLOG(EVIL_HELP)}
+		/*if ( argc < 2 ) {
+			EVILLOG(EVIL_HELP)}*/
 
-		else {
-			evil::mapargs(argc, argv);
-			
-			evil::readjsonconfig();
-			
-			evil::connecttoirc();
-			
-			//EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
-				
-			string a = string("You are not a good person");
-			
-			//evil::test();
+		evil::mapargs(argc, argv);
+
+		evil::readjsonconfig();
+
+		if (!BASS_Init(-1,44100,0,0,NULL)) {
+			EVILLOG("Can't initialize device");
+			break;
 		}
+
+		//string a("test.mp3");
+		//evil::playtts(a);
+
+		evil::connecttoirc();
+
+		//EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
+
+		//string a = string("You are not a good person");
+
+		//evil::test();
+		
 		
 		break;
 	}
@@ -298,7 +312,6 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 	EVILLOG("'" << user << "' said in channel " << params[0] << ": " << params[1]);
 	
 	evil::tts(user, quote);
-	
 
 }
 
@@ -306,7 +319,7 @@ void event_join (irc_session_t * session, const char * event, const char * origi
 {
 	dump_event (session, event, origin, params, count);
 	irc_cmd_user_mode (session, "+i");
-	irc_cmd_msg (session, params[0], "Hi all");
+	irc_cmd_msg (session, params[0], "Badass text to speech: Enabled!");
 }
 
 bool evil::connecttoirc() {
@@ -433,8 +446,6 @@ void evil::tts(string &user, string &quote) {
 	quote.assign(all.str());
 	
 	EVILLOG("going to fetch: " << quote)
-	
-	return;
 		
 	sanitizequote(quote);
 	plusspaces(quote);
@@ -558,46 +569,59 @@ void evil::getmp3url(string &quote, string &html, string &cookie) {
 void evil::writemp3(string &quote, sf::Http::Response &get) {
 	fstream mp3;
 	
-	string filename(quote);
-	
 	stringstream ss;
 	ss << "gets/";
-	ss << filename << ".mp3";
+	ss << quote << ".mp3";
+	string filename(ss.str());
 	
 	EVILLOG("writing .mp3: " << ss.str())
 		
-	mp3.open(ss.str(), ios::out | std::ios::binary);
+	mp3.open(filename, ios::out | std::ios::binary);
 	mp3 << get.getBody();
 	mp3.close();
+	
+	evil::playtts(filename);
 }
 
-/*
-void evil::test() {
-	sf::Http http( "194.158.21.231", 8081 );
-	sf::Http::Request request;
+#define Sleep(x) usleep(x*1000)
+
+
+HSTREAM *strs=NULL;
+int strc=0;
+
+void evil::playtts(string &filename) {
 	
-	request.setMethod(sf::Http::Request::Get);
-	request.setUri( "/MESSAGES/012099097112101108097071114111117112/AcapelaGroup_WebDemo_HTML/sounds/98576538_d8b66814dca07.mp3" );
+	HMUSIC mod;
 	
-	request.setHttpVersion(1, 1);
-	request.setField("Accept-Encoding", "identity;q=1, *;q=0");
-	request.setField("Accept-Language", "nl-NL,nl;q=0.8,en-US;q=0.6,en;q=0.4");
-	request.setField("Cache-Control", "max-age=0");
-	request.setField("Connection", "keep-alive");
-	request.setField("Host", "194.158.21.231:8081");
-	request.setField("Pragma", "no-cache");
-	//request.setField("Range", "bytes=0-");
-	// range gives partial response
+	char *file = strdup(filename.c_str());
+	EVILLOG("going to open " << file)
+		
+	HSTREAM str;
 	
-	request.setField("Referer", "http://www.acapela-group.com/demo-tts/DemoHTML5Form_V2.php?langdemo=Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E");
-	request.setField("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36");
-	request.setField("Cookie", "PHPSESSID=1n67esiaifl8m2pj2n6khq2be3; qtrans_cookie_test=qTranslate+Cookie+Test; __utma=57132138.719638552.1420242028.1420242028.1420242028.1; __utmc=57132138; __utmz=57132138.1420242028.1.1.utmccn=(direct)|utmcsr=(direct)|utmcmd=(none)");
-	//request.setBody("");
+	if (str=BASS_StreamCreateFile(FALSE,file,0,0,0)) {
+		strc++;
+		strs=(HSTREAM*)realloc((void*)strs,strc*sizeof(*strs));
+		strs[strc-1]=str;
+	} else {
+		EVILLOG("Can't open stream");
+		return;
+	}
 	
-	EVILLOG("getting .mp3 ...")
-	sf::Http::Response response = http.sendRequest(request);
+	if (!BASS_ChannelPlay(strs[0],TRUE)) {
+		EVILLOG("Can't play file?")
+	}
 	
-	EVILLOG("status: " << response.getStatus())
+	EVILLOG("should be playing now")
+	/*sf::SoundBuffer Buffer;
 	
-	evil::writemp3(response);
-}*/
+	const string f(filename);
+	
+	if ( ! Buffer.loadFromFile(f) ) {
+		EVILLOG("Couldn't load " << filename.c_str())
+		return;
+	}
+	
+	sf::Sound Sound;
+	Sound.setBuffer(Buffer);
+	Sound.play();*/
+}
