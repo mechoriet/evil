@@ -7,6 +7,12 @@
 		"password": "oauth:4ncjgxxxxxxx, get yours at http://www.twitchapps.com/tmi"
 	},
     
+    "TTS Settings": {
+        "Wait Between; 4s +": 0,
+        "Pronounce Names": 1,
+        "Standard Voice": "NIY"
+    },
+    
 	"User Specific Voices": {
 		"Your Buddy": "WillBadGuy"
 	}

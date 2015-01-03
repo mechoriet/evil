@@ -28,6 +28,8 @@
 #include <libircclient.h>
 #include <libirc_rfcnumeric.h>
 
+#include "unistd.h" // sleep
+
 // bass includes
 #include "Q:/bass24/c/bass.h"
 #include <commctrl.h>
@@ -114,6 +116,7 @@ namespace evil {
 	
 	Json::Value midrash;
 	bool readjsonconfig();
+	Json::Value TTS_Settings;
 	
 	bool connecttoirc();
 	
@@ -136,7 +139,13 @@ int main(int argc, char** argv) {
 
 		evil::mapargs(argc, argv);
 
-		evil::readjsonconfig();
+		if ( ! evil::readjsonconfig() ) {
+			EVILLOG("Your .json config is syntactically broken. Delete it if you want me to generate a basic template.")
+			break;
+		}
+		
+		EVILLOG("Starting...")
+		sleep(1.5D);
 
 		if (!BASS_Init(-1,44100,0,0,NULL)) {
 			EVILLOG("Can't initialize device");
@@ -233,11 +242,14 @@ bool evil::readjsonconfig() {
 	
 	using namespace Json;
 	Reader reader;
-	bool good = reader.parse(buf, midrash);
 	
-	if ( ! good) {
-		EVILLOG(name << " is syntactically broken. Delete it if you want a new one.")
+	if ( ! reader.parse(buf, midrash) )
 		return false;
+	
+	TTS_Settings = midrash["TTS Settings"];
+	
+	if ( ! TTS_Settings ) {
+		EVILLOG("Missing \"TTS Settings\" Object in config .json")
 	}
 	
 	/*std::string version = midrash.get("version", "unknown").asString();
@@ -583,13 +595,11 @@ void evil::writemp3(string &quote, sf::Http::Response &get) {
 	evil::playtts(filename);
 }
 
-#define Sleep(x) usleep(x*1000)
-
 
 HSTREAM *strs=NULL;
 int strc=0;
 
-#include "unistd.h"
+
 void evil::playtts(string &filename) {
 	
 	HMUSIC mod;
@@ -616,7 +626,7 @@ void evil::playtts(string &filename) {
 	} else
 		time=BASS_ChannelBytes2Seconds(str, len); // the length in seconds
 	
-	EVILLOG("going to calculate length")
+	EVILLOG("mp3 length in seconds is: " << time)
 	
 	
 	EVILLOG("going to play file")
@@ -625,8 +635,9 @@ void evil::playtts(string &filename) {
 		EVILLOG("Can't play file?")
 	}
 	
-	//time += 3000; // add wait between messages
-	//usleep(time);
+	int wait = TTS_Settings.get("Wait Between; 4s +", 4).asInt();
+	time += wait; // add wait between messages
+	sleep(time);
 	
 	/*int s = strc;
 	BASS_StreamFree(strs[s]); // free the stream
