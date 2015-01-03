@@ -2,8 +2,8 @@
 	"IRC Setup": {
 		"server": "irc.twitch.tv",
         "port (remove these parentheses to use)": 6667,
-		"username": "insert username",
-		"channel": "insert username if you want to hear your own channel",
+		"username": "guy",
+		"channel": "#guy",
 		"password": "oauth:4ncjgxxxxxxx, get yours at http://www.twitchapps.com/tmi"
 	},
     

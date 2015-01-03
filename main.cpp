@@ -22,6 +22,8 @@
 //#include <random>
 
 #include <SFML/Network.hpp>
+#include <SFML/Audio.hpp>
+
 #include "Q:/jsoncpp-master/include/json/json.h"
 #include <libircclient.h>
 #include <libirc_rfcnumeric.h>
@@ -263,7 +265,7 @@ void event_connect (irc_session_t * session, const char * event, const char * or
 
 	irc_cmd_join (session, ctx->channel, 0);
 	
-	EVILLOG("connected");
+	EVILLOG("connected to " << ctx->channel);
 }
 
 
@@ -277,6 +279,10 @@ void event_numeric (irc_session_t * session, unsigned int event, const char * or
 
 void event_channel (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count)
 {
+	dump_event (session, event, origin, params, count);
+	
+	EVILLOG("channel event")
+		
 	char nickbuf[128];
 
 	if ( count != 2 )
@@ -303,7 +309,7 @@ bool evil::connecttoirc() {
 		EVILLOG("Missing IRC Setup Object in config .json")
 	}
 	
-	string server = IRCSetup.get("server", "none :(").asString();
+	string server = IRCSetup.get("server", "none sir").asString();
 	int port = IRCSetup.get("port", 6667).asInt();
 	string channel = IRCSetup.get("channel", "N/A").asString();
 	string username = IRCSetup.get("username", "not provided").asString();
@@ -327,6 +333,24 @@ bool evil::connecttoirc() {
 	callbacks.event_join = event_join;
 	callbacks.event_numeric = event_numeric;
 	callbacks.event_channel = event_channel;
+	
+	//callbacks.event_connect = event_connect;
+	//callbacks.event_join = event_join;
+	callbacks.event_nick = dump_event;
+	callbacks.event_quit = dump_event;
+	callbacks.event_part = dump_event;
+	callbacks.event_mode = dump_event;
+	callbacks.event_topic = dump_event;
+	callbacks.event_kick = dump_event;
+	//callbacks.event_channel = event_channel;
+	callbacks.event_privmsg = dump_event;
+	callbacks.event_notice = dump_event;
+	callbacks.event_invite = dump_event;
+	callbacks.event_umode = dump_event;
+	callbacks.event_ctcp_rep = dump_event;
+	callbacks.event_ctcp_action = dump_event;
+	callbacks.event_unknown = dump_event;
+	//callbacks.event_numeric = event_numeric;
 
 	// Set up the rest of events
 
@@ -338,8 +362,6 @@ bool evil::connecttoirc() {
 		EVILLOG("no session")
 		return false;
 	}
-	
-	EVILLOG("channel is " << channel.c_str())
 	
 	ctx.channel = strdup(channel.c_str());
 	ctx.nick = strdup(username.c_str());
@@ -356,6 +378,12 @@ bool evil::connecttoirc() {
 		return false;
 	}
 	
+	/*if ( irc_cmd_join(ses, ctx.channel, 0) ) {
+		EVILLOG("irc_cmd_join error " << irc_strerror(irc_errno(ses)) << " code " << irc_errno(ses) )
+		return false;
+	}*/
+	
+	//irc_cmd_msg(ses, "steerlat", "Running cool text to speech service try it.");
 	
 }
 
