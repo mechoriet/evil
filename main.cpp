@@ -589,6 +589,7 @@ void evil::writemp3(string &quote, sf::Http::Response &get) {
 HSTREAM *strs=NULL;
 int strc=0;
 
+#include "unistd.h"
 void evil::playtts(string &filename) {
 	
 	HMUSIC mod;
@@ -607,21 +608,34 @@ void evil::playtts(string &filename) {
 		return;
 	}
 	
-	if (!BASS_ChannelPlay(strs[0],TRUE)) {
+	
+	
+	
+		
+		
+	// get time of .mp3
+	double time;
+	QWORD len=BASS_ChannelGetLength(str, BASS_POS_BYTE); // the length in bytes
+	if ( -1 == len ) {
+		EVILLOG( "Error getting length: " << BASS_ErrorGetCode() )
+	} else
+		time=BASS_ChannelBytes2Seconds(str, len); // the length in seconds
+	
+	EVILLOG("going to calculate length")
+	
+	
+	EVILLOG("going to play file")
+	
+	if (!BASS_ChannelPlay(strs[strc-1],TRUE)) {
 		EVILLOG("Can't play file?")
 	}
 	
-	EVILLOG("should be playing now")
-	/*sf::SoundBuffer Buffer;
+	//time += 3000; // add wait between messages
+	//usleep(time);
 	
-	const string f(filename);
+	/*int s = strc;
+	BASS_StreamFree(strs[s]); // free the stream
+	strc--;
+	memcpy(strs+s,strs+s+1,(strc-s)*sizeof(*strs));*/
 	
-	if ( ! Buffer.loadFromFile(f) ) {
-		EVILLOG("Couldn't load " << filename.c_str())
-		return;
-	}
-	
-	sf::Sound Sound;
-	Sound.setBuffer(Buffer);
-	Sound.play();*/
 }
