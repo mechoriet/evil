@@ -12,9 +12,11 @@
 #include <string>
 #include <cstring>
 #include <map>
+#include <io.h> // for F_OK file exists
 //#include <random>
 
 #include <SFML/Network.hpp>
+#include "Q:/jsoncpp-master/include/json/json.h"
 
 using namespace std;
 
@@ -24,7 +26,20 @@ using namespace std;
 	"Use the following arguments:" LFCR \
 	"-server=ip or dns" LFCR \
 	"--------------------------------------"
-#define EVILBAR LFCR << "=============================================================" << LFCR
+//#define EVILBAR LFCR << "=============================================================" << LFCR
+#define EVILBAR ""
+
+#define EVIL_CONFIG_DEFAULT_JSON "\
+	{\
+	\"IRC_Settings\": {\
+		\"channel\": \"cool\",\
+		\"server\": \"1239123\"\
+	},\
+	\
+	\"Voice By User\": {\
+		\"steerlat\": \"WillBadGuy\"\
+	}\
+}"
 
 #define EVILLOG(QUOTE) \
 	std::cout << QUOTE << std::endl; \
@@ -64,6 +79,9 @@ namespace evil {
 	void test();
 	void writemp3(string &, sf::Http::Response &);
 	//extern validArgs
+	
+	Json::Value midrash;
+	bool readjsonconfig();
 }
 
 
@@ -89,9 +107,11 @@ int main(int argc, char** argv) {
 
 			// CONTINUE AS NORMAL ^_^
 			
+			evil::readjsonconfig();
+			
 			EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
-			string a = string("Please don't!");
+			string a = string("I am the captain of my soul");
 			evil::posttext( a );
 			
 			//evil::test();
@@ -165,6 +185,44 @@ bool evil::hasminimuminfo() {
 	else
 		return true;
 	
+}
+
+bool evil::readjsonconfig() {
+	fstream config;
+	
+	const char *name = "config.json";
+	
+	char *buf;
+	
+	if ( ! (access( name, F_OK ) != -1) ) {
+		EVILLOG("creating missing config.json");
+		config.open(name, ios::in | ios::out);
+		config << EVIL_CONFIG_DEFAULT_JSON;
+	} else {
+		config.open(name, ios::in);
+		config.seekg (0, config.end);
+		int len = config.tellg();
+		config.seekg (0, config.beg);
+		buf = new char [len];
+		config.read (buf, len);
+	}
+	
+	using namespace Json;
+	Reader reader;
+	bool good = reader.parse(buf, midrash);
+	
+	if ( ! good) {
+		EVILLOG("config.json has errors. if you can't fix it, delete your config and we'll generate a default one")
+	}
+	
+	/*std::string version = midrash.get("version", "unknown").asString();
+	
+	LOG("Midrash.json versions " << version);
+	
+	if ( version.compare(ap::VERSION) ) {
+		LOG("base/exe version mismatch");
+		return false;
+	}*/
 }
 
 //int 
