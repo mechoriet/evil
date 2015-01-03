@@ -1,9 +1,14 @@
           -~=. `Evil` IRC TTS Bot .=~-
 
 Hi
-Running evil.exe without arguments :(
-Use the following arguments:
--server=ip or dns
---------------------------------------
+provided -server=value
+provided -channel=cool
+ignored argument: cool (missing dash -)
+provided -verbose
+unrecognized awesome
 
-press key to die
+=============================================================
+The input is sufficient and syntactically correct. Starting...
+=============================================================
+
+Press any key to hide
