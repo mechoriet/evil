@@ -191,7 +191,7 @@ bool evil::hasminimuminfo() {
 }
 
 bool evil::readjsonconfig() {
-	fstream json;
+	
 	
 	const char *name;
 	
@@ -203,12 +203,12 @@ bool evil::readjsonconfig() {
 	// specified config .json doesn't exist...
 	if ( ! (access( name, F_OK ) != -1) ) {
 		EVILLOG("creating missing " << name)
-		json.open(name, ios::out);
+		ofstream json(name, ios::out);
 		json << EVIL_CONFIG_DEFAULT_JSON;
 	}
 	
 	// get config .json in buf
-	json.open(name, ios::in);
+	ifstream json(name, ios::in);
 	json.seekg (0, json.end);
 	int len = json.tellg();
 	json.seekg (0, json.beg);
@@ -248,7 +248,7 @@ void evil::sanitizequote(string &quote) {
 	}
 	
 	if ( config[VERBOSE] ) {
-	EVILLOG("sanitized quote: " << quote) }
+		EVILLOG("sanitized quote: " << quote) }
 }
 
 void evil::plusspaces(string &quote) {
@@ -256,7 +256,7 @@ void evil::plusspaces(string &quote) {
 		if ( ' ' == x ) x = '+';
 	
 	if ( config[VERBOSE] ) {
-	EVILLOG("plussed spaces: " << quote) }
+		EVILLOG("plussed spaces: " << quote) }
 }
 
 void evil::posttext(string &quote) {
@@ -271,10 +271,13 @@ void evil::posttext(string &quote) {
 	post << "&MySelectedVoice=Laura";
 	post << "&11=Sanna&12=Justine&13=Louise&14=Manon&15=Andreas&16=Dimitris&17=chiara&18=Sakura&19=Minji&20=Lulu&21=Bente&22=Ania&23=Marcia&24=Celia&25=Alyona&26=Antonio&27=Emilio&28=Elin&29=Samuel&30=Kal&31=Mia&32=Ipek";
 	post << "&MySelectedVoice=WillBadGuy";
-	post << "&MyTextForTTS=" << quote;;
+	post << "&MyTextForTTS=" << quote;
 	post << "&t=1&SendToVaaS=";
-	EVILLOG("produced get body: " << post.str() )
+	
+	if ( config[VERBOSE] ) {
+		EVILLOG("produced get body: " << post.str()) }
 		
+	
 	sf::Http http("http://www.acapela-group.com");
 	
 	sf::Http::Request request;
@@ -293,14 +296,14 @@ void evil::posttext(string &quote) {
 	request.setBody( post.str() );
 	
 	if ( config[VERBOSE] ) {
-	EVILLOG("getting .html ...") }
+		EVILLOG("getting .html ...") }
 	sf::Http::Response response = http.sendRequest(request);
 	
 	string html = string(response.getBody());
 	string cookie = response.getField("Cookie");
 	
 	if ( config[VERBOSE] ) {
-	EVILLOG("cookie is " << cookie) }
+		EVILLOG("cookie is " << cookie) }
 	
 	evil::getmp3url( quote, html, cookie );
 	
