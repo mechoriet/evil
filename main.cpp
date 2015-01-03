@@ -18,6 +18,7 @@
 
 #include <SFML/Network.hpp>
 #include "Q:/jsoncpp-master/include/json/json.h"
+#include "IRC.h"
 
 using namespace std;
 
@@ -87,6 +88,8 @@ namespace evil {
 	
 	Json::Value midrash;
 	bool readjsonconfig();
+	
+	bool connecttoirc();
 }
 
 
@@ -104,17 +107,14 @@ int main(int argc, char** argv) {
 
 		else {
 			evil::mapargs(argc, argv);
-
-			if ( ! evil::hasminimuminfo() )
-				break;
-			
-			// CONTINUE AS NORMAL ^_^
 			
 			evil::readjsonconfig();
 			
+			evil::connecttoirc();
+			
 			//EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
-			string a = string("You are a beautiful soul inmate");
+			string a = string("You are not a good person");
 			evil::posttext( a );
 			
 			//evil::test();
@@ -172,26 +172,7 @@ void evil::mapargs(int argc, char** argv) {
 	}
 }
 
-bool evil::hasminimuminfo() {
-	
-	/*if ( ! config[SERVER] ) {
-		EVILLOG( "missing -server argument: " );
-		
-		return false;
-	}
-	
-	else if ( ! config[CHANNEL] ) {
-		EVILLOG( "missing -channel argument" );
-		return false;
-	}
-
-	else*/
-		return true;
-	
-}
-
 bool evil::readjsonconfig() {
-	
 	
 	const char *name;
 	
@@ -200,7 +181,6 @@ bool evil::readjsonconfig() {
 	
 	char *buf;
 	
-	// specified config .json doesn't exist...
 	if ( ! (access( name, F_OK ) != -1) ) {
 		EVILLOG("creating missing " << name)
 		ofstream json(name, ios::out);
@@ -222,6 +202,7 @@ bool evil::readjsonconfig() {
 	
 	if ( ! good) {
 		EVILLOG(name << " is syntactically broken. Delete it if you want a new one.")
+		return false;
 	}
 	
 	/*std::string version = midrash.get("version", "unknown").asString();
@@ -230,11 +211,37 @@ bool evil::readjsonconfig() {
 	
 	if ( version.compare(ap::VERSION) ) {
 		LOG("base/exe version mismatch");
-		return false;
 	}*/
+	
+	return true;
+	
 }
 
-//int 
+/*int function_name(char* params, irc_reply_data* hostd, void* conn) {
+	IRC* irc_conn=(IRC*)conn; // notice that you are passed a pointer to the connection object 
+
+	return 0;
+}*/
+
+bool evil::connecttoirc() {
+	
+	const Json::Value IRCSetup = midrash["IRC Setup"];
+	
+	if ( ! IRCSetup ) {
+		EVILLOG("Missing IRC Setup Object in config .json")
+	}
+	
+	IRC conn;
+
+	string server = midrash.get("server", "N/A").asString();
+	string username = midrash.get("username", 0).asString();
+	string password = midrash.get("password", 0).asString();
+	
+	conn.start( strdup(server.c_str()), 0, "nick", strdup(username.c_str()), "irc name", strdup(password.c_str()));
+	conn.message_loop();
+	
+	//conn.hook_irc_command("irc response", &function_name);
+}
 
 void evil::sanitizequote(string &quote) {
 	const char illegals[] = {

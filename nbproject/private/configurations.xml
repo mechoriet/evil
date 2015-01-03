@@ -6,7 +6,11 @@
       </df>
       <df name="o">
       </df>
+      <in>IRC.cc</in>
+      <in>IRC.h</in>
       <in>auxiliary.cpp</in>
+      <in>ircbot.cpp</in>
+      <in>ircbot.h</in>
       <in>main.cpp</in>
       <in>whatwassaid.txt</in>
     </df>
