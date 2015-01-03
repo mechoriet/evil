@@ -1,10 +1,10 @@
 {
-	"IRC_Settings": {
+	"IRC Settings": {
 		"channel": "cool",
 		"server": "1239123"
 	},
 	
-	"Voice By User": {
-		"steerlat": "WillBadGuy"	
+	"User Specific Voices": {
+		"steerlat": "WillBadGuy"
 	}
 }

@@ -12,6 +12,7 @@
 #include <string>
 #include <cstring>
 #include <map>
+#include <algorithm> // for string remove
 #include <io.h> // for F_OK file exists
 //#include <random>
 
@@ -80,7 +81,8 @@ namespace evil {
 	void getmp3url(string &, string &, string&);
 	void test();
 	void writemp3(string &, sf::Http::Response &);
-	string &plusspaces(string &);
+	void plusspaces(string &);
+	void sanitizequote(string &);
 	//extern validArgs
 	
 	Json::Value midrash;
@@ -103,18 +105,16 @@ int main(int argc, char** argv) {
 		else {
 			evil::mapargs(argc, argv);
 
-			if ( ! evil::hasminimuminfo() ) {
-				EVILLOG( EVILBAR << "Not enough arguments to start operating on your IRC" << EVILBAR )
+			if ( ! evil::hasminimuminfo() )
 				break;
-			}
-
+			
 			// CONTINUE AS NORMAL ^_^
 			
 			evil::readjsonconfig();
 			
-			EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
+			//EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
-			string a = string("I maim the living and the dead. What is thy bidding, my master? My master.");
+			string a = string("You are a beautiful soul inmate");
 			evil::posttext( a );
 			
 			//evil::test();
@@ -200,6 +200,7 @@ bool evil::readjsonconfig() {
 	
 	char *buf;
 	
+	// specified config .json doesn't exist...
 	if ( ! (access( name, F_OK ) != -1) ) {
 		EVILLOG("creating missing " << name)
 		json.open(name, ios::out);
@@ -235,15 +236,32 @@ bool evil::readjsonconfig() {
 
 //int 
 
-string &evil::plusspaces(string &quote) {
+void evil::sanitizequote(string &quote) {
+	const char illegals[] = {
+		/* Windows filename: */
+		'\\', '/', ':', '*', '?', '"', '<', '>', '|',
+		/* extra: */
+		'&', '=', '[', ']', '{', '}'};
+	
+	for (char x : illegals ) {
+		quote.erase ( std::remove(quote.begin(), quote.end(), x), quote.end());
+	}
+	
+	if ( config[VERBOSE] ) {
+	EVILLOG("sanitized quote: " << quote) }
+}
+
+void evil::plusspaces(string &quote) {
 	for ( char &x : quote )
 		if ( ' ' == x ) x = '+';
 	
-	EVILLOG("plussed spaces: " << quote)
+	if ( config[VERBOSE] ) {
+	EVILLOG("plussed spaces: " << quote) }
 }
 
 void evil::posttext(string &quote) {
 
+	sanitizequote(quote);
 	plusspaces(quote);
 	
 	stringstream post;
@@ -274,13 +292,15 @@ void evil::posttext(string &quote) {
 	request.setField("Cache-Control", "max-age=0");
 	request.setBody( post.str() );
 	
-	EVILLOG("getting .html ...")
+	if ( config[VERBOSE] ) {
+	EVILLOG("getting .html ...") }
 	sf::Http::Response response = http.sendRequest(request);
 	
 	string html = string(response.getBody());
 	string cookie = response.getField("Cookie");
 	
-	EVILLOG("cookie is " << cookie)
+	if ( config[VERBOSE] ) {
+	EVILLOG("cookie is " << cookie) }
 	
 	evil::getmp3url( quote, html, cookie );
 	
@@ -358,17 +378,18 @@ void evil::getmp3url(string &quote, string &html, string &cookie) {
 }
 
 void evil::writemp3(string &quote, sf::Http::Response &get) {
-	std::fstream mp3;
+	fstream mp3;
 	
-	// create .mp3 name
+	string filename(quote);
+	
 	stringstream ss;
 	ss << "gets/";
-	ss << quote << ".mp3";
+	ss << filename << ".mp3";
 	
+	EVILLOG("writing .mp3: " << ss.str())
+		
 	mp3.open(ss.str(), ios::out | std::ios::binary);
-	
 	mp3 << get.getBody();
-	
 	mp3.close();
 }
 
