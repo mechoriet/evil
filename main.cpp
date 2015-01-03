@@ -14,11 +14,18 @@
 #include <map>
 #include <algorithm> // for string remove
 #include <io.h> // for F_OK file exists
+
+#include <winsock2.h>
+#include <windows.h>
+#include <process.h>
+
 //#include <random>
 
 #include <SFML/Network.hpp>
 #include "Q:/jsoncpp-master/include/json/json.h"
-#include "IRC.h"
+#include <libircclient.h>
+#include <libirc_rfcnumeric.h>
+
 
 using namespace std;
 
@@ -115,7 +122,7 @@ int main(int argc, char** argv) {
 			//EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
 			string a = string("You are not a good person");
-			evil::posttext( a );
+			//evil::posttext( a );
 			
 			//evil::test();
 		}
@@ -217,11 +224,53 @@ bool evil::readjsonconfig() {
 	
 }
 
-/*int function_name(char* params, irc_reply_data* hostd, void* conn) {
-	IRC* irc_conn=(IRC*)conn; // notice that you are passed a pointer to the connection object 
+void dump_event (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count)
+{
+	char buf[512];
+	int cnt;
 
-	return 0;
-}*/
+	buf[0] = '\0';
+
+	for ( cnt = 0; cnt < count; cnt++ )
+	{
+		if ( cnt )
+			strcat (buf, "|");
+
+		strcat (buf, params[cnt]);
+	}
+
+	//EVILLOG ("Event \"%s\", origin: \"%s\", params: %d [%s]", event, origin ? origin : "NULL", cnt, buf);
+}
+
+void event_connect (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count) {
+	EVILLOG("connected")
+}
+
+void event_numeric (irc_session_t * session, unsigned int event, const char * origin, const char ** params, unsigned int count)
+{
+	char buf[24];
+	sprintf (buf, "%d", event);
+
+	dump_event (session, buf, origin, params, count);
+	
+	EVILLOG("event numeric")
+}
+
+void event_channel (irc_session_t * session, const char * event, const char * origin, const char ** params, unsigned int count)
+{
+	char nickbuf[128];
+
+	if ( count != 2 )
+		return;
+	
+	// origin guy
+	// params[0] channel
+	// params[1] said
+
+	const char *user = (origin ? origin : "someone");
+	EVILLOG("'" << user << "' said in channel "<<params[0]<<": " << params[1])
+
+}
 
 bool evil::connecttoirc() {
 	
@@ -231,16 +280,51 @@ bool evil::connecttoirc() {
 		EVILLOG("Missing IRC Setup Object in config .json")
 	}
 	
-	IRC conn;
+	string server = IRCSetup.get("server", "N/A").asString();
+	int port = IRCSetup.get("port", 6667).asInt();
+	string username = IRCSetup.get("username", "N/A").asString();
+	string password = IRCSetup.get("password", "N/A").asString();
+	
+	WSADATA wsaData;
 
-	string server = midrash.get("server", "N/A").asString();
-	string username = midrash.get("username", 0).asString();
-	string password = midrash.get("password", 0).asString();
+	if ( WSAStartup ( MAKEWORD (2, 2), &wsaData) != 0 ) {
+		EVILLOG("error")
+		return false;
+	}
 	
-	conn.start( strdup(server.c_str()), 0, "nick", strdup(username.c_str()), "irc name", strdup(password.c_str()));
-	conn.message_loop();
+	// The IRC callbacks structure
+	irc_callbacks_t callbacks;
+
+	// Init it
+	memset ( &callbacks, 0, sizeof(callbacks) );
+
+	// Set up the mandatory events
+	callbacks.event_connect = event_connect;
+	callbacks.event_numeric = event_numeric;
+	callbacks.event_channel = event_channel;
+
+	// Set up the rest of events
+
+	// Now create the session
+	irc_session_t * session = irc_create_session( &callbacks );
+
+	if ( !session ) {
+		// Handle the error
+		EVILLOG("no session")
+		return false;
+	}
 	
-	//conn.hook_irc_command("irc response", &function_name);
+	if ( irc_connect (session, "irc.twitch.tv", 6667, "oauth:4ncjgy8qgtao8mc3vh9a09ww2bv9p9", "steerlat", "steerlat", "evil" ) ) {
+		EVILLOG("irc connect problem: " << irc_strerror(irc_errno(session)) << " code " << irc_errno(session) )
+		return false;
+	}
+	
+	if ( irc_run (session) ) {
+		EVILLOG("irc_run problem: " << irc_strerror(irc_errno(session)) << " code " << irc_errno(session) )
+		return false;
+	}
+	
+	
 }
 
 void evil::sanitizequote(string &quote) {

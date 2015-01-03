@@ -22,11 +22,8 @@ evil.exe: $(O)
 o/main.o: main.cpp
 	g++ $(INCL) -c main.cpp -o o/main.o $(FLAGS)
 
-o/ircbot.o: ircbot.cpp
-	g++ -c ircbot.cpp -o o/ircbot.o
-
 o/IRC.o: IRC.cc
-	gcc -c IRC.cc -o o/IRC.o
+	g++ -c IRC.cc -o o/IRC.o
 	
 clean:
 	rm $(O)
