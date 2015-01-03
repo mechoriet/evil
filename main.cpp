@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 			
 			EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
-			string a = string("Holy shit yes bro");
+			string a = string("Please don't!");
 			evil::posttext( a );
 			
 			//evil::test();
@@ -175,6 +175,7 @@ void evil::posttext(string &quote) {
 	post << "MyLanguages=sonid10&MySelectedVoice=WillBadGuy&";
 	post << "MyTextForTTS=" << quote;
 	post << "&t=1&SendToVaaS=";
+	EVILLOG("produced get body: " << post.str() )
 	
 	sf::Http http("http://www.acapela-group.com");
 	
@@ -197,7 +198,7 @@ void evil::posttext(string &quote) {
 	sf::Http::Response response = http.sendRequest(request);
 	
 	string html = string(response.getBody());
-	string cookie = response.getField("cookie");
+	string cookie = response.getField("Cookie");
 	
 	EVILLOG("cookie is " << cookie)
 	
@@ -223,33 +224,45 @@ void evil::getmp3url(string &quote, string &html, string &cookie) {
 	int pos = start + startjs.length();
 	int len = (end + endjs.length()) - (start + startjs.length()+2);
 	string url( html.substr(pos, len) );
+	string file( html.substr(pos, len) );
 	EVILLOG("mp3 url is: " << url.c_str() );
 	
 	// get host of .mp3 URL
 	std::size_t slash = url.find("/", 7);
-	string host( url.substr(7+pos, slash-(7+pos)) );
-	EVILLOG("host of mp3 is " << host)
-	string server("http://194.158.21.231:8081");
+	string host( url.substr(7, slash-7) );
+	string hostport( host );
+	//EVILLOG("host is " << host)
+	string server( url.substr(0, slash) );
+	//EVILLOG("server is " << server)
+	
+	// generate port
+	std::size_t colon = host.find(":");
+	//EVILLOG("removed port from host: " << host.c_str() )
+	string port( host.substr(colon+1, slash-colon) );
+	host.assign( host.substr(0, colon) );
+	//EVILLOG("produced port: " << port.c_str() )
 	
 	// remove 'http://xx' from mp3 URL
-	url.assign( url.substr(server.length(), string::npos) );
+	file.assign( url.substr(server.length(), string::npos) );
 	
-	sf::Http http( server.c_str(), 8081 );
+	sf::Http http( host.c_str(), stoi(port.c_str()) );
 	
-	EVILLOG("getting file: " << url << " from " << host)
+	EVILLOG("getting file: " << url << " from " << hostport)
 		
 	sf::Http::Request request;
 	request.setMethod(sf::Http::Request::Get);
-	request.setUri( url.c_str() );
+	request.setUri( file.c_str() );
 
 	request.setField("Accept", "*/*");
 	request.setField("Accept-Encoding", "identity;q=1, *;q=0");
 	request.setField("Accept-Language", "nl-NL,nl;q=0.8,en-US;q=0.6,en;q=0.4");
 	request.setField("Cache-Control", "max-age=0");
 	request.setField("Connection", "keep-alive");
-	request.setField("Host", host.c_str() );
+	request.setField("Host", hostport.c_str() );
 	request.setField("Pragma", "no-cache");
 	//request.setField("Range", "bytes=0-");
+	// range gives partial response so no-go
+	
 	request.setField("Referer", "http://www.acapela-group.com/demo-tts/DemoHTML5Form_V2.php?langdemo=Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E");
 	request.setField("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36");
 	request.setField("Cookie", cookie.c_str() );
@@ -262,6 +275,21 @@ void evil::getmp3url(string &quote, string &html, string &cookie) {
 		
 	evil::writemp3(quote, response);
 	
+}
+
+void evil::writemp3(string &quote, sf::Http::Response &get) {
+	std::fstream mp3;
+	
+	// create .mp3 name
+	stringstream ss;
+	ss << "gets/";
+	ss << quote << ".mp3";
+	
+	mp3.open(ss.str(), ios::out | std::ios::binary);
+	
+	mp3 << get.getBody();
+	
+	mp3.close();
 }
 
 /*
@@ -293,14 +321,4 @@ void evil::test() {
 	EVILLOG("status: " << response.getStatus())
 	
 	evil::writemp3(response);
-}
-
-
-void evil::writemp3(quote, sf::Http::Response &get) {
-	std::fstream mp3;
-	mp3.open("gets/mp3.mp3", ios::out | std::ios::binary);
-	
-	mp3 << get.getBody();
-	
-	mp3.close();
-}
+}*/

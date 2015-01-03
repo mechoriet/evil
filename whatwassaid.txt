@@ -11,6 +11,11 @@ unrecognized awesome
 The input is sufficient and syntactically correct. Starting...
 =============================================================
 
+produced get body: MyLanguages=sonid10&MySelectedVoice=WillBadGuy&MyTextForTTS=Please don't!&t=1&SendToVaaS=
+getting .html ...
+cookie is 
+mp3 url is: http://194.158.21.231:8081/MESSAGES/012099097112101108097071114111117112/AcapelaGroup_WebDemo_HTML/sounds/98579462_d8b6a52abd8f1.mp3
+getting file: http://194.158.21.231:8081/MESSAGES/012099097112101108097071114111117112/AcapelaGroup_WebDemo_HTML/sounds/98579462_d8b6a52abd8f1.mp3 from 194.158.21.231:8081
 getting .mp3 ...
 status: 200
 
