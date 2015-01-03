@@ -96,12 +96,13 @@ namespace evil {
 	void mapargs(int, char **);
 	bool hasminimuminfo();
 	
-	void posttext(string &);
-	void getmp3url(string &, string &, string&);
+	void tts(string &u, string &q);
+	void getmp3url(string &q, string &h, string&c);
 	void test();
 	void writemp3(string &, sf::Http::Response &);
 	void plusspaces(string &);
 	void sanitizequote(string &);
+	void stripuser(string &);
 	//extern validArgs
 	
 	Json::Value midrash;
@@ -136,7 +137,6 @@ int main(int argc, char** argv) {
 			//EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
 			string a = string("You are not a good person");
-			//evil::posttext( a );
 			
 			//evil::test();
 		}
@@ -288,9 +288,17 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 	if ( count != 2 )
 		return;
 
-	const char *user = origin ? origin : "someone";
+	//const char *user = origin ? origin : "someone";
+	
+	string user( origin );
+	evil::stripuser(user);
+	
+	string quote( params[1] );
 	
 	EVILLOG("'" << user << "' said in channel " << params[0] << ": " << params[1]);
+	
+	evil::tts(user, quote);
+	
 
 }
 
@@ -336,7 +344,7 @@ bool evil::connecttoirc() {
 	
 	//callbacks.event_connect = event_connect;
 	//callbacks.event_join = event_join;
-	callbacks.event_nick = dump_event;
+	/*callbacks.event_nick = dump_event;
 	callbacks.event_quit = dump_event;
 	callbacks.event_part = dump_event;
 	callbacks.event_mode = dump_event;
@@ -349,7 +357,7 @@ bool evil::connecttoirc() {
 	callbacks.event_umode = dump_event;
 	callbacks.event_ctcp_rep = dump_event;
 	callbacks.event_ctcp_action = dump_event;
-	callbacks.event_unknown = dump_event;
+	callbacks.event_unknown = dump_event;*/
 	//callbacks.event_numeric = event_numeric;
 
 	// Set up the rest of events
@@ -387,6 +395,14 @@ bool evil::connecttoirc() {
 	
 }
 
+
+void evil::stripuser(string &user) {
+	std::size_t found = user.find_first_of("!");
+	if ( string::npos != found ) {
+		user.assign( user.substr(0, found) );
+	}
+}
+
 void evil::sanitizequote(string &quote) {
 	const char illegals[] = {
 		/* Windows filename: */
@@ -410,8 +426,16 @@ void evil::plusspaces(string &quote) {
 		EVILLOG("plussed spaces: " << quote) }
 }
 
-void evil::posttext(string &quote) {
+void evil::tts(string &user, string &quote) {
 
+	stringstream all;
+	all << user << " said: " << quote;
+	quote.assign(all.str());
+	
+	EVILLOG("going to fetch: " << quote)
+	
+	return;
+		
 	sanitizequote(quote);
 	plusspaces(quote);
 	
