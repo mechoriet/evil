@@ -55,12 +55,14 @@ namespace evil {
 		VERBOSE,
 		SERVER,
 		CHANNEL,
+		CONFIG,
 		COUNT };
 		
 	string valids[] = {
 		string("verbose"),
 		string("server"),
-		string("channel") };
+		string("channel"),
+		string("config") };
 	string *config[COUNT] = { new string };
 		
 	std::fstream log;
@@ -78,6 +80,7 @@ namespace evil {
 	void getmp3url(string &, string &, string&);
 	void test();
 	void writemp3(string &, sf::Http::Response &);
+	string &plusspaces(string &);
 	//extern validArgs
 	
 	Json::Value midrash;
@@ -111,7 +114,7 @@ int main(int argc, char** argv) {
 			
 			EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
 				
-			string a = string("I am the captain of my soul");
+			string a = string("I maim the living and the dead. What is thy bidding, my master? My master.");
 			evil::posttext( a );
 			
 			//evil::test();
@@ -171,7 +174,7 @@ void evil::mapargs(int argc, char** argv) {
 
 bool evil::hasminimuminfo() {
 	
-	if ( ! config[SERVER] ) {
+	/*if ( ! config[SERVER] ) {
 		EVILLOG( "missing -server argument: " );
 		
 		return false;
@@ -182,37 +185,42 @@ bool evil::hasminimuminfo() {
 		return false;
 	}
 
-	else
+	else*/
 		return true;
 	
 }
 
 bool evil::readjsonconfig() {
-	fstream config;
+	fstream json;
 	
-	const char *name = "config.json";
+	const char *name;
+	
+	if ( config[CONFIG] ) name = config[CONFIG]->c_str();
+	else name = "config.json";
 	
 	char *buf;
 	
 	if ( ! (access( name, F_OK ) != -1) ) {
-		EVILLOG("creating missing config.json");
-		config.open(name, ios::in | ios::out);
-		config << EVIL_CONFIG_DEFAULT_JSON;
-	} else {
-		config.open(name, ios::in);
-		config.seekg (0, config.end);
-		int len = config.tellg();
-		config.seekg (0, config.beg);
-		buf = new char [len];
-		config.read (buf, len);
+		EVILLOG("creating missing " << name)
+		json.open(name, ios::out);
+		json << EVIL_CONFIG_DEFAULT_JSON;
 	}
+	
+	// get config .json in buf
+	json.open(name, ios::in);
+	json.seekg (0, json.end);
+	int len = json.tellg();
+	json.seekg (0, json.beg);
+	buf = new char [len];
+	json.read (buf, len);
+	json.close();
 	
 	using namespace Json;
 	Reader reader;
 	bool good = reader.parse(buf, midrash);
 	
 	if ( ! good) {
-		EVILLOG("config.json has errors. if you can't fix it, delete your config and we'll generate a default one")
+		EVILLOG(name << " is syntactically broken. Delete it if you want a new one.")
 	}
 	
 	/*std::string version = midrash.get("version", "unknown").asString();
@@ -227,14 +235,28 @@ bool evil::readjsonconfig() {
 
 //int 
 
+string &evil::plusspaces(string &quote) {
+	for ( char &x : quote )
+		if ( ' ' == x ) x = '+';
+	
+	EVILLOG("plussed spaces: " << quote)
+}
+
 void evil::posttext(string &quote) {
 
+	plusspaces(quote);
+	
 	stringstream post;
-	post << "MyLanguages=sonid10&MySelectedVoice=WillBadGuy&";
-	post << "MyTextForTTS=" << quote;
+	post << "langdemo:Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E";
+	post << "&MyLanguages=sonid10";
+	post << "&0=Leila&1=Laia&2=Eliska&3=Mette&4=Jeroen&5=Daan&6=Liam&7=Deepa&8=Rhona&9=Graham";
+	post << "&MySelectedVoice=Laura";
+	post << "&11=Sanna&12=Justine&13=Louise&14=Manon&15=Andreas&16=Dimitris&17=chiara&18=Sakura&19=Minji&20=Lulu&21=Bente&22=Ania&23=Marcia&24=Celia&25=Alyona&26=Antonio&27=Emilio&28=Elin&29=Samuel&30=Kal&31=Mia&32=Ipek";
+	post << "&MySelectedVoice=WillBadGuy";
+	post << "&MyTextForTTS=" << quote;;
 	post << "&t=1&SendToVaaS=";
 	EVILLOG("produced get body: " << post.str() )
-	
+		
 	sf::Http http("http://www.acapela-group.com");
 	
 	sf::Http::Request request;
