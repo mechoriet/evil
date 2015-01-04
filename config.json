@@ -17,9 +17,15 @@
 	},
 	
 	"User Specific Voices": {
-		"buddy": "WillBadGuy",
-		"guy": "WillUpClose"
+		"watcher": {
+			"Language": "sonid9",
+			"Voice": "Rosie"
+		},
+		"buddy": {
+			"Language": "sonid10",
+			"Voice": "WillOldMan"
+		}
 	},
 	
-	"Choose from these voices (this field is not used by evil.exe)": "Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose"
+	"Choose from these sonid10 voices (this field is not used by evil.exe)": "sonid9: Rosie, sonid10: Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose"
 }

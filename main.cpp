@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
 		if ( ! evil::readjsonconfig() )
 			break;
 		
-		int d = 1;
+		int d = -1;
 		if ( evil::config[evil::DEVICE] )
 			d = atoi(evil::config[evil::DEVICE]->c_str());
 		
@@ -172,13 +172,10 @@ int main(int argc, char** argv) {
 		);*/
 		
 		BASS_DEVICEINFO info;
-		BASS_GetDeviceInfo(d, &info);
-		EVILLOG("description if available")
-		if (info.name) {
-			EVILLOG(info.name)
-		}
-		if(info.driver) {
-			EVILLOG(info.driver)
+		if (BASS_GetDeviceInfo(d, &info)) {
+			EVILLOG("description " << info.name << " " << info.driver)
+		} else {
+			EVILLOG("BASS code for bad GetDeviceInfo " << BASS_ErrorGetCode())
 		}
 		
 		if (!BASS_Init(d,96000,0,0,NULL)) {
@@ -379,19 +376,21 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 		evil::tts(language, voice, speech, false);
 	}
 	
-	// continue after "name voice"
+	// continue after name voiced
 	
-	string voice( evil::TTS_Settings.get("Standard Voice", "WillBadGuy").asString() );	
 	string language( evil::TTS_Settings.get("Standard Voice Language", "sonid10").asString() );
+	string voice( evil::TTS_Settings.get("Standard Voice", "WillBadGuy").asString() );	
 	
 	Json::ValueIterator i = evil::USV.begin();
 	for ( ; i != evil::USV.end(); i ++ ) {
 		Json::Value key = i.key();
 		Json::Value value = *i;
-		string checkvoice( value.asString() );
-		if ( ! user.compare(key.asString()) ) {
-			voice.assign( checkvoice );
-			EVILLOG(user << " has specific voice: " << voice)
+		if ( ! user.compare(key.asString()) ) {	
+			if ( value.isObject() ) {
+				language.assign( value.get("Language", "sonid10").asString() );
+				voice.assign( value.get("Voice", "WillBadGuy").asString() );
+				EVILLOG(user << " has specific voice: " << voice)
+			}
 		}
 	}
 	evil::tts(language, voice, quote, true);
