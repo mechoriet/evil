@@ -63,6 +63,7 @@ using namespace std;
 	\"TTS Settings\": {\n\
 		\"Wait Between; 4s +\": 0,\n\
 		\"Pronounce Names\": true,\n\
+		\"Nobodies Silent\": false,\n\
 		\"Name Voice\": \"Jeroen\",\n\
 		\"Name Voice Language\": \"sonid4\",\n\
 		\"Standard Voice\": \"WillBadGuy\",\n\
@@ -80,7 +81,7 @@ using namespace std;
 		}\n\
 	},\n\
 	\n\
-	\"Choose from these sonid10 voices (this field is not used by evil.exe)\": \"sonid9: Rosie, sonid10: Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose\"\n\
+	\"read howto.txt for voices\": 0\n\
 }"
 
 #define EVILLOG(QUOTE) \
@@ -367,20 +368,11 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 	
 	EVILLOG("'" << user << "' said in channel " << params[0] << ": " << params[1]);
 	
-	stringstream ss;
-	if ( evil::TTS_Settings.get("Pronounce Names", false).asBool() ) {
-		ss << user/* << "+said+"*/;
-		string speech(ss.str());
-		string voice( evil::TTS_Settings.get("Name Voice", "WillUpClose").asString() );
-		string language( evil::TTS_Settings.get("Name Voice Language", "sonid4").asString() );
-		evil::tts(language, voice, speech, false);
-	}
-	
-	// continue after name voiced
 	
 	string language( evil::TTS_Settings.get("Standard Voice Language", "sonid10").asString() );
 	string voice( evil::TTS_Settings.get("Standard Voice", "WillBadGuy").asString() );	
 	
+	bool matchusv = false;
 	Json::ValueIterator i = evil::USV.begin();
 	for ( ; i != evil::USV.end(); i ++ ) {
 		Json::Value key = i.key();
@@ -390,10 +382,25 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 				language.assign( value.get("Language", "sonid10").asString() );
 				voice.assign( value.get("Voice", "WillBadGuy").asString() );
 				EVILLOG(user << " has specific voice: " << voice)
+				matchusv = true;
 			}
 		}
 	}
-	evil::tts(language, voice, quote, true);
+	
+	
+	
+	if ( ! ( evil::TTS_Settings.get("Nobodies Silent", false).asBool()  &&  ! matchusv ) ) {
+		if ( evil::TTS_Settings.get("Pronounce Names", false).asBool() ) {
+			string namequote(user);
+			string namevoice( evil::TTS_Settings.get("Name Voice", "WillUpClose").asString() );
+			string namelanguage( evil::TTS_Settings.get("Name Voice Language", "sonid4").asString() );
+			evil::tts(namelanguage, namevoice, namequote, false);
+		}
+		evil::tts(language, voice, quote, true);
+	}
+	else {
+		EVILLOG("nobodies don't get to have a voice")
+	}
 
 }
 

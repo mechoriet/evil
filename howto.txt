@@ -8,10 +8,13 @@ Simply create a shortcut to evil.exe, go into properties and add -config=differe
 This way, you can easily change Evil TTS Settings :)
 
 If your Twitch recorder doesn't pick up, or the program crashes to a device, try playing with -device=2 or maybe even 3
-alternatively, put it to -device=0 to not stream to your main audio device
 
 Funny lines:
 - I am writhing in sheer agony, as the pain, of my soul, stretches to infinity, and I am reminded, of my mortality, as I gaze at the stars, in blight, of my bane
 - You're dead. You're dad. You're Dead. Both
 - Okay? Okay. Hah ha? Hah ha. Hah? Hah. Hah? Cool? Cool. Hah. Hah? Hah ha. Ha? Ha.
 - lelelelelelel lolololololol
+
+
+Voices:
+sonid5: Femke, Jasmijn, sonid9: Rosie, sonid10: Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose
