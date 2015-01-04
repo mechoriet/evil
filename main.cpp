@@ -74,7 +74,7 @@ using namespace std;
 		\"guy\": \"WillUpClose\"\n\
 	},\n\
 	\n\
-	\"Choose from these voices (this field is not used by evil.exe)\": \"Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose\"\n\
+	\"Choose from these sonid10 voices (this field is not used by evil.exe)\": \"Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose\"\n\
 }"
 
 #define EVILLOG(QUOTE) \
