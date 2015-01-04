@@ -70,11 +70,17 @@ using namespace std;
 	},\n\
 	\n\
 	\"User Specific Voices\": {\n\
-		\"buddy\": \"WillBadGuy\",\n\
-		\"guy\": \"WillUpClose\"\n\
+		\"watcher\": {\n\
+			\"Language\": \"sonid9\",\n\
+			\"Voice\": \"Rosie\"\n\
+		},\n\
+		\"buddy\": {\n\
+			\"Language\": \"sonid10\",\n\
+			\"Voice\": \"WillOldMan\"\n\
+		}\n\
 	},\n\
 	\n\
-	\"Choose from these sonid10 voices (this field is not used by evil.exe)\": \"Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose\"\n\
+	\"Choose from these sonid10 voices (this field is not used by evil.exe)\": \"sonid9: Rosie, sonid10: Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose\"\n\
 }"
 
 #define EVILLOG(QUOTE) \
@@ -101,13 +107,15 @@ namespace evil {
 		SERVER,
 		CHANNEL,
 		CONFIG,
+		DEVICE,
 		COUNT };
 		
 	string valids[] = {
 		string("verbose"),
 		string("server"),
 		string("channel"),
-		string("config") };
+		string("config"),
+		string("device") };
 	string *config[COUNT] = { new string };
 		
 	std::fstream log;
@@ -151,11 +159,36 @@ int main(int argc, char** argv) {
 
 		if ( ! evil::readjsonconfig() )
 			break;
-
-		if (!BASS_Init(-1,44100,0,0,NULL)) {
-			EVILLOG("Can't initialize device");
+		
+		int d = 1;
+		if ( evil::config[evil::DEVICE] )
+			d = atoi(evil::config[evil::DEVICE]->c_str());
+		
+		EVILLOG("device is " << d);
+		
+		/*BASS_SetConfig(
+			BASS_CONFIG_DEV_DEFAULT,
+			true
+		);*/
+		
+		BASS_DEVICEINFO info;
+		BASS_GetDeviceInfo(d, &info);
+		EVILLOG("description if available")
+		if (info.name) {
+			EVILLOG(info.name)
+		}
+		if(info.driver) {
+			EVILLOG(info.driver)
+		}
+		
+		if (!BASS_Init(d,96000,0,0,NULL)) {
+			EVILLOG("Can't initialize device " <<  BASS_ErrorGetCode());
 			break;
 		}
+		
+		/*if (!BASS_SetDevice(1)) {
+			EVILLOG("Can't set device " <<  BASS_ErrorGetCode());
+		}*/
 
 		evil::connecttoirc();
 		

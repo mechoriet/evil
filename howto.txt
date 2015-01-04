@@ -7,6 +7,8 @@ If the config doesn't exist, it will generate a fresh one.
 Simply create a shortcut to evil.exe, go into properties and add -config=different_config.json... or whatever  you like..........
 This way, you can easily change Evil TTS Settings :)
 
+If your Twitch recorder doesn't pick up, or the program crashes to a device, try playing with -device=2 or maybe even 3
+
 Funny lines:
 - I am writhing in sheer agony, as the pain, of my soul, stretches to infinity, and I am reminded, of my mortality, as I gaze at the stars, in blight, of my bane
 - You're dead. You're dad. You're Dead. Both
