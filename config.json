@@ -10,8 +10,10 @@
 	"TTS Settings": {
 		"Wait Between; 4s +": 0,
 		"Pronounce Names": true,
-		"Name Voice": "Laura",
-		"Standard Voice": "WillBadGuy"
+		"Name Voice": "Jeroen",
+		"Name Voice Language": "sonid4",
+		"Standard Voice": "WillBadGuy",
+		"Standard Voice Language": "sonid10"
 	},
 	
 	"User Specific Voices": {

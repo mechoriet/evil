@@ -63,8 +63,10 @@ using namespace std;
 	\"TTS Settings\": {\n\
 		\"Wait Between; 4s +\": 0,\n\
 		\"Pronounce Names\": true,\n\
-		\"Name Voice\": \"Laura\",\n\
-		\"Standard Voice\": \"WillBadGuy\"\n\
+		\"Name Voice\": \"Jeroen\",\n\
+		\"Name Voice Language\": \"sonid4\",\n\
+		\"Standard Voice\": \"WillBadGuy\",\n\
+		\"Standard Voice Language\": \"sonid10\"\n\
 	},\n\
 	\n\
 	\"User Specific Voices\": {\n\
@@ -110,30 +112,23 @@ namespace evil {
 		
 	std::fstream log;
 	
-	void parseserver();
-	void parsechannel();
-	
-	int matchvalid();
-	
 	map<string *, string *> argm;
 	void mapargs(int, char **);
-	bool hasminimuminfo();
 	
-	void tts(string &u, string &q, bool);
-	void getmp3url(sf::Http::Response *, string &v, string &q, string &h, string&c, bool);
+	void tts(string &l, string &v, string &q, bool);
+	void getmp3url(sf::Http::Response *, string &url, string &v, string &q, string &h, string&c, bool);
 	void test();
 	void writemp3(string &v, string &, string, sf::Http::Response *);
 	void plusspaces(string &);
 	void getvoice(string &);
 	void sanitizequote(string &);
 	void stripuser(string &);
-	void playtts(string &, bool);
-	
-	
+	void playtts(string &url, string &, bool);
 	
 	Json::Value midrash;
 	bool readjsonconfig();
 	Json::Value TTS_Settings;
+	Json::Value USV; 
 	
 	bool connecttoirc();
 	
@@ -151,8 +146,6 @@ int main(int argc, char** argv) {
 	EVILLOG("Hi");
 	
 	while ( true ) {
-		/*if ( argc < 2 ) {
-			EVILLOG(EVIL_HELP)}*/
 
 		evil::mapargs(argc, argv);
 
@@ -164,17 +157,7 @@ int main(int argc, char** argv) {
 			break;
 		}
 
-		//string a("test.mp3");
-		//evil::playtts(a);
-
 		evil::connecttoirc();
-
-		//EVILLOG( EVILBAR << "The input is sufficient and syntactically correct. Starting..." << EVILBAR)
-
-		//string a = string("You are not a good person");
-
-		//evil::test();
-		
 		
 		break;
 	}
@@ -259,18 +242,27 @@ bool evil::readjsonconfig() {
 	Reader reader;
 	
 	if ( ! reader.parse(buf, midrash) ) {
-		EVILLOG("Your .json config is syntactically broken. Delete it if you want me to generate a basic template.")
+		EVILLOG(name << " is syntactically broken. delete it if you want me to generate a new one")
 		return false;
 	}
 	
 	TTS_Settings = midrash["TTS Settings"];
 	
 	if ( ! TTS_Settings ) {
-		EVILLOG("Missing \"TTS Settings\" Object in " << config[CONFIG])
+		EVILLOG("missing \"TTS Settings\" object in " << config[CONFIG])
+		EVILLOG("using default settings instead")
 	}
+	
 	
 	int wait = TTS_Settings.get("Wait Between; 4s +", 4).asInt();
 	EVILLOG("Wait Between; 4s +: " << wait)
+	
+	USV = midrash["User Specific Voices"];
+	
+	if ( ! USV ) {
+		EVILLOG("missing \"User Specific Voices\" object in " << config[CONFIG])
+		EVILLOG("which is not a show stopper")
+	}
 	
 	/*std::string version = midrash.get("version", "unknown").asString();
 	
@@ -347,16 +339,29 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 	
 	stringstream ss;
 	if ( evil::TTS_Settings.get("Pronounce Names", false).asBool() ) {
-		ss << user << " said: ";
-		string prefix(ss.str());
+		ss << user/* << "+said+"*/;
+		string speech(ss.str());
 		string voice( evil::TTS_Settings.get("Name Voice", "WillUpClose").asString() );
-		evil::tts(voice, prefix, false);
+		string language( evil::TTS_Settings.get("Name Voice Language", "sonid4").asString() );
+		evil::tts(language, voice, speech, false);
 	}
 	
 	// continue after "name voice"
 	
 	string voice( evil::TTS_Settings.get("Standard Voice", "WillBadGuy").asString() );	
-	evil::tts(voice, quote, true);
+	string language( evil::TTS_Settings.get("Standard Voice Language", "sonid10").asString() );
+	
+	Json::ValueIterator i = evil::USV.begin();
+	for ( ; i != evil::USV.end(); i ++ ) {
+		Json::Value key = i.key();
+		Json::Value value = *i;
+		string checkvoice( value.asString() );
+		if ( ! user.compare(key.asString()) ) {
+			voice.assign( checkvoice );
+			EVILLOG(user << " has specific voice: " << voice)
+		}
+	}
+	evil::tts(language, voice, quote, true);
 
 }
 
@@ -484,17 +489,24 @@ void evil::plusspaces(string &quote) {
 		EVILLOG("plussed spaces: " << quote) }
 }
 
-void evil::tts(string &voice, string &quote, bool wait) {
+void evil::tts(string &language, string &voice, string &quote, bool wait) {
 
 	EVILLOG("going to say: \"" << quote << "\"")
 
-	//stringstream ss;
-	//ss << "gets/" << voice << "&" << quote << ".mp3";
-	//path.assign(ss.str());
+	stringstream ss;
+	ss << "gets/" << voice << "&" << quote << ".mp3";
+	string path( ss.str() );
 		
+	// mp3 already exists?
+	if ( access( path.c_str(), F_OK ) != -1 ) {
+		EVILLOG("mp3 already exists, nice")
+		evil::playtts(path, path, wait);
+		return;
+	}
+	
 	stringstream post;
 	post << "langdemo:Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E";
-	post << "&MyLanguages=sonid10";
+	post << "&MyLanguages=" << language;
 	post << "&0=Leila&1=Laia&2=Eliska&3=Mette&4=Jeroen&5=Daan&6=Liam&7=Deepa&8=Rhona&9=Graham";
 	post << "&11=Sanna&12=Justine&13=Louise&14=Manon&15=Andreas&16=Dimitris&17=chiara&18=Sakura&19=Minji&20=Lulu&21=Bente&22=Ania&23=Marcia&24=Celia&25=Alyona&26=Antonio&27=Emilio&28=Elin&29=Samuel&30=Kal&31=Mia&32=Ipek";
 	post << "&MySelectedVoice=" << voice;
@@ -533,17 +545,17 @@ void evil::tts(string &voice, string &quote, bool wait) {
 		EVILLOG("cookie is " << cookie) }
 	
 	sf::Http::Response *mp3response = new sf::Http::Response();
-	evil::getmp3url( mp3response, voice, quote, html, cookie, wait );
+	string url("");
+	evil::getmp3url( mp3response, url, voice, quote, html, cookie, wait );
 	
-	string path("");
 	evil::writemp3(voice, path, quote, mp3response);
 	delete mp3response;
 	
-	evil::playtts(path, wait);
+	evil::playtts(url, path, wait);
 	
 }
 
-void evil::getmp3url(sf::Http::Response *response, string &voice, string &quote, string &html, string &cookie, bool wait) {
+void evil::getmp3url(sf::Http::Response *response, string &fullurl, string &voice, string &quote, string &html, string &cookie, bool wait) {
 	//evil::log << html.c_str();
 	
 	string startjs("var myPhpVar = '");
@@ -563,6 +575,7 @@ void evil::getmp3url(sf::Http::Response *response, string &voice, string &quote,
 	string url( html.substr(pos, len) );
 	string file( html.substr(pos, len) );
 	EVILLOG("mp3 url is: " << url.c_str() );
+	fullurl.assign(url);
 	
 	// get host of .mp3 URL
 	std::size_t slash = url.find("/", 7);
@@ -612,21 +625,16 @@ void evil::getmp3url(sf::Http::Response *response, string &voice, string &quote,
 }
 
 void evil::writemp3(string &voice, string &path, string quote, sf::Http::Response *get) {
+	EVILLOG("writing .mp3: " << path.c_str())
+	
 	fstream mp3;
-	
-	stringstream ss;
-	ss << "gets/" << voice << "&" << quote << ".mp3";
-	path.assign(ss.str());
-	
-	EVILLOG("writing .mp3: " << ss.str())
-		
 	mp3.open(path, ios::out | std::ios::binary);
 	mp3 << get->getBody();
 	mp3.close();
 }
 
 
-void evil::playtts(string &path, bool wait) {
+void evil::playtts(string &url, string &path, bool wait) {
 	static HSTREAM *strs=NULL;
 	static int strc=0;
 	
@@ -643,6 +651,8 @@ void evil::playtts(string &path, bool wait) {
 		EVILLOG("Can't open stream");
 		return;
 	}
+	
+	//if (str=BASS_StreamCreateURL(url,0,0,))
 	
 	// get time of .mp3
 	double time = 1;
@@ -662,12 +672,21 @@ void evil::playtts(string &path, bool wait) {
 	}
 	
 	int tween = TTS_Settings.get("Wait Between; 2s +", 0).asInt();
-	time += tween; // add wait between messages
+	time += tween;
+	
 	if ( wait )
 		time += EVIL_FORCEDWAIT;
+	
 	sleep(time);
 	
 	EVILLOG("waking up from sleep("<<time<<"), deleting HSTREAM")
+		
+	// still playing... don't delete
+	while(true)
+	if (BASS_ChannelIsActive(str)) {
+		sleep(0.01); // sleep milisecond
+	} else
+		break;
 		
 	int s = strc-1;
 	BASS_StreamFree(strs[s]); // free the stream
