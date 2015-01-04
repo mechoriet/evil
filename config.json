@@ -10,6 +10,7 @@
 	"TTS Settings": {
 		"Wait Between; 4s +": 0,
 		"Pronounce Names": true,
+		"Nobodies Silent": false,
 		"Name Voice": "Jeroen",
 		"Name Voice Language": "sonid4",
 		"Standard Voice": "WillBadGuy",
@@ -27,5 +28,5 @@
 		}
 	},
 	
-	"Choose from these sonid10 voices (this field is not used by evil.exe)": "sonid9: Rosie, sonid10: Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose"
+	"read howto.txt for voices": 0
 }

@@ -366,6 +366,14 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 	evil::plusspaces(quote);
 	evil::sanitizequote(quote);
 	
+	if ( quote.length() < 1 )
+		return;
+	
+	// fix oddity where quote starting with '@' disables speech generation
+	if ( '@' == quote[0] )
+		quote[0] = '+';
+	
+	
 	EVILLOG("'" << user << "' said in channel " << params[0] << ": " << params[1]);
 	
 	
@@ -386,8 +394,6 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 			}
 		}
 	}
-	
-	
 	
 	if ( ! ( evil::TTS_Settings.get("Nobodies Silent", false).asBool()  &&  ! matchusv ) ) {
 		if ( evil::TTS_Settings.get("Pronounce Names", false).asBool() ) {
@@ -535,7 +541,7 @@ void evil::tts(string &language, string &voice, string &quote, bool wait) {
 	stringstream ss;
 	ss << "gets/" << voice << "&" << quote << ".mp3";
 	string path( ss.str() );
-		
+	
 	// mp3 already exists?
 	if ( access( path.c_str(), F_OK ) != -1 ) {
 		EVILLOG("mp3 already exists, nice")
