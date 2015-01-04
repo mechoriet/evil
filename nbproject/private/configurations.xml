@@ -6,7 +6,9 @@
       </df>
       <df name="o">
       </df>
+      <in>EVIL README.txt</in>
       <in>auxiliary.cpp</in>
+      <in>howto.txt</in>
       <in>main.cpp</in>
       <in>whatwassaid.txt</in>
     </df>

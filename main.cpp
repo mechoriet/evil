@@ -48,16 +48,31 @@ using namespace std;
 //#define EVILBAR LFCR << "=============================================================" << LFCR
 #define EVILBAR ""
 
+#define EVIL_FORCEDWAIT 2
+
 #define EVIL_CONFIG_DEFAULT_JSON "\
-	{\
-	\"IRC_Settings\": {\
-		\"channel\": \"cool\",\
-		\"server\": \"1239123\"\
-	},\
-	\
-	\"Voice By User\": {\
-		\"steerlat\": \"WillBadGuy\"\
-	}\
+{\n\
+	\"IRC Settings\": {\n\
+		\"server\": \"irc.twitch.tv\",\n\
+		\"port (remove these parentheses to use)\": 6667,\n\
+		\"username\": \"you\",\n\
+		\"channel\": \"#you\",\n\
+		\"password\": \"oauth:4ncjgxxxxxxx, get yours at http://www.twitchapps.com/tmi\"\n\
+	},\n\
+	\n\
+	\"TTS Settings\": {\n\
+		\"Wait Between; 4s +\": 0,\n\
+		\"Pronounce Names\": true,\n\
+		\"Name Voice\": \"Laura\",\n\
+		\"Standard Voice\": \"WillBadGuy\"\n\
+	},\n\
+	\n\
+	\"User Specific Voices\": {\n\
+		\"buddy\": \"WillBadGuy\",\n\
+		\"guy\": \"WillUpClose\"\n\
+	},\n\
+	\n\
+	\"Choose from these voices (this field is not used by evil.exe)\": \"Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose\"\n\
 }"
 
 #define EVILLOG(QUOTE) \
@@ -104,15 +119,17 @@ namespace evil {
 	void mapargs(int, char **);
 	bool hasminimuminfo();
 	
-	void tts(string &u, string &q);
-	void getmp3url(string &q, string &h, string&c);
+	void tts(string &u, string &q, bool);
+	void getmp3url(sf::Http::Response *, string &v, string &q, string &h, string&c, bool);
 	void test();
-	void writemp3(string &, sf::Http::Response &);
+	void writemp3(string &v, string &, string, sf::Http::Response *);
 	void plusspaces(string &);
+	void getvoice(string &);
 	void sanitizequote(string &);
 	void stripuser(string &);
-	void playtts(string &);
-	//extern validArgs
+	void playtts(string &, bool);
+	
+	
 	
 	Json::Value midrash;
 	bool readjsonconfig();
@@ -139,13 +156,8 @@ int main(int argc, char** argv) {
 
 		evil::mapargs(argc, argv);
 
-		if ( ! evil::readjsonconfig() ) {
-			EVILLOG("Your .json config is syntactically broken. Delete it if you want me to generate a basic template.")
+		if ( ! evil::readjsonconfig() )
 			break;
-		}
-		
-		EVILLOG("Starting...")
-		sleep(1.5D);
 
 		if (!BASS_Init(-1,44100,0,0,NULL)) {
 			EVILLOG("Can't initialize device");
@@ -223,12 +235,15 @@ bool evil::readjsonconfig() {
 	if ( config[CONFIG] ) name = config[CONFIG]->c_str();
 	else name = "config.json";
 	
+	EVILLOG("parsing " << name)
+	
 	char *buf;
 	
 	if ( ! (access( name, F_OK ) != -1) ) {
-		EVILLOG("creating missing " << name)
+		EVILLOG("creating missing " << name << ", please fill it out in a text editor")
 		ofstream json(name, ios::out);
 		json << EVIL_CONFIG_DEFAULT_JSON;
+		return false;
 	}
 	
 	// get config .json in buf
@@ -243,14 +258,19 @@ bool evil::readjsonconfig() {
 	using namespace Json;
 	Reader reader;
 	
-	if ( ! reader.parse(buf, midrash) )
+	if ( ! reader.parse(buf, midrash) ) {
+		EVILLOG("Your .json config is syntactically broken. Delete it if you want me to generate a basic template.")
 		return false;
+	}
 	
 	TTS_Settings = midrash["TTS Settings"];
 	
 	if ( ! TTS_Settings ) {
-		EVILLOG("Missing \"TTS Settings\" Object in config .json")
+		EVILLOG("Missing \"TTS Settings\" Object in " << config[CONFIG])
 	}
+	
+	int wait = TTS_Settings.get("Wait Between; 4s +", 4).asInt();
+	EVILLOG("Wait Between; 4s +: " << wait)
 	
 	/*std::string version = midrash.get("version", "unknown").asString();
 	
@@ -320,10 +340,23 @@ void event_channel (irc_session_t * session, const char * event, const char * or
 	evil::stripuser(user);
 	
 	string quote( params[1] );
+	evil::plusspaces(quote);
+	evil::sanitizequote(quote);
 	
 	EVILLOG("'" << user << "' said in channel " << params[0] << ": " << params[1]);
 	
-	evil::tts(user, quote);
+	stringstream ss;
+	if ( evil::TTS_Settings.get("Pronounce Names", false).asBool() ) {
+		ss << user << " said: ";
+		string prefix(ss.str());
+		string voice( evil::TTS_Settings.get("Name Voice", "WillUpClose").asString() );
+		evil::tts(voice, prefix, false);
+	}
+	
+	// continue after "name voice"
+	
+	string voice( evil::TTS_Settings.get("Standard Voice", "WillBadGuy").asString() );	
+	evil::tts(voice, quote, true);
 
 }
 
@@ -336,10 +369,10 @@ void event_join (irc_session_t * session, const char * event, const char * origi
 
 bool evil::connecttoirc() {
 	
-	const Json::Value IRCSetup = midrash["IRC Setup"];
+	const Json::Value IRCSetup = midrash["IRC Settings"];
 	
 	if ( ! IRCSetup ) {
-		EVILLOG("Missing IRC Setup Object in config .json")
+		EVILLOG("Missing \"IRC Settings\" Object in " << config[CONFIG])
 	}
 	
 	string server = IRCSetup.get("server", "none sir").asString();
@@ -451,24 +484,20 @@ void evil::plusspaces(string &quote) {
 		EVILLOG("plussed spaces: " << quote) }
 }
 
-void evil::tts(string &user, string &quote) {
+void evil::tts(string &voice, string &quote, bool wait) {
 
-	stringstream all;
-	all << user << " said: " << quote;
-	quote.assign(all.str());
-	
-	EVILLOG("going to fetch: " << quote)
+	EVILLOG("going to say: \"" << quote << "\"")
+
+	//stringstream ss;
+	//ss << "gets/" << voice << "&" << quote << ".mp3";
+	//path.assign(ss.str());
 		
-	sanitizequote(quote);
-	plusspaces(quote);
-	
 	stringstream post;
 	post << "langdemo:Powered+by+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-vaas.com%22%3EAcapela+Voice+as+a+Service%3C%2Fa%3E.+For+demo+and+evaluation+purpose+only%2C+for+commercial+use+of+generated+sound+files+please+go+to+%3Ca+href%3D%22http%3A%2F%2Fwww.acapela-box.com%22%3Ewww.acapela-box.com%3C%2Fa%3E";
 	post << "&MyLanguages=sonid10";
 	post << "&0=Leila&1=Laia&2=Eliska&3=Mette&4=Jeroen&5=Daan&6=Liam&7=Deepa&8=Rhona&9=Graham";
-	post << "&MySelectedVoice=Laura";
 	post << "&11=Sanna&12=Justine&13=Louise&14=Manon&15=Andreas&16=Dimitris&17=chiara&18=Sakura&19=Minji&20=Lulu&21=Bente&22=Ania&23=Marcia&24=Celia&25=Alyona&26=Antonio&27=Emilio&28=Elin&29=Samuel&30=Kal&31=Mia&32=Ipek";
-	post << "&MySelectedVoice=WillBadGuy";
+	post << "&MySelectedVoice=" << voice;
 	post << "&MyTextForTTS=" << quote;
 	post << "&t=1&SendToVaaS=";
 	
@@ -503,11 +532,18 @@ void evil::tts(string &user, string &quote) {
 	if ( config[VERBOSE] ) {
 		EVILLOG("cookie is " << cookie) }
 	
-	evil::getmp3url( quote, html, cookie );
+	sf::Http::Response *mp3response = new sf::Http::Response();
+	evil::getmp3url( mp3response, voice, quote, html, cookie, wait );
+	
+	string path("");
+	evil::writemp3(voice, path, quote, mp3response);
+	delete mp3response;
+	
+	evil::playtts(path, wait);
 	
 }
 
-void evil::getmp3url(string &quote, string &html, string &cookie) {
+void evil::getmp3url(sf::Http::Response *response, string &voice, string &quote, string &html, string &cookie, bool wait) {
 	//evil::log << html.c_str();
 	
 	string startjs("var myPhpVar = '");
@@ -570,41 +606,31 @@ void evil::getmp3url(string &quote, string &html, string &cookie) {
 	
 	
 	EVILLOG("getting .mp3 ...")
-	sf::Http::Response response = http.sendRequest(request);
+	*response = http.sendRequest(request);
 	
-	EVILLOG("status: " << response.getStatus())
-		
-	evil::writemp3(quote, response);
-	
+	EVILLOG("status: " << response->getStatus())
 }
 
-void evil::writemp3(string &quote, sf::Http::Response &get) {
+void evil::writemp3(string &voice, string &path, string quote, sf::Http::Response *get) {
 	fstream mp3;
 	
 	stringstream ss;
-	ss << "gets/";
-	ss << quote << ".mp3";
-	string filename(ss.str());
+	ss << "gets/" << voice << "&" << quote << ".mp3";
+	path.assign(ss.str());
 	
 	EVILLOG("writing .mp3: " << ss.str())
 		
-	mp3.open(filename, ios::out | std::ios::binary);
-	mp3 << get.getBody();
+	mp3.open(path, ios::out | std::ios::binary);
+	mp3 << get->getBody();
 	mp3.close();
-	
-	evil::playtts(filename);
 }
 
 
-HSTREAM *strs=NULL;
-int strc=0;
-
-
-void evil::playtts(string &filename) {
+void evil::playtts(string &path, bool wait) {
+	static HSTREAM *strs=NULL;
+	static int strc=0;
 	
-	HMUSIC mod;
-	
-	char *file = strdup(filename.c_str());
+	char *file = strdup(path.c_str());
 	EVILLOG("going to open " << file)
 		
 	HSTREAM str;
@@ -619,7 +645,7 @@ void evil::playtts(string &filename) {
 	}
 	
 	// get time of .mp3
-	double time;
+	double time = 1;
 	QWORD len=BASS_ChannelGetLength(str, BASS_POS_BYTE); // the length in bytes
 	if ( -1 == len ) {
 		EVILLOG( "Error getting length: " << BASS_ErrorGetCode() )
@@ -635,13 +661,17 @@ void evil::playtts(string &filename) {
 		EVILLOG("Can't play file?")
 	}
 	
-	int wait = TTS_Settings.get("Wait Between; 4s +", 4).asInt();
-	time += wait; // add wait between messages
+	int tween = TTS_Settings.get("Wait Between; 2s +", 0).asInt();
+	time += tween; // add wait between messages
+	if ( wait )
+		time += EVIL_FORCEDWAIT;
 	sleep(time);
 	
-	/*int s = strc;
+	EVILLOG("waking up from sleep("<<time<<"), deleting HSTREAM")
+		
+	int s = strc-1;
 	BASS_StreamFree(strs[s]); // free the stream
 	strc--;
-	memcpy(strs+s,strs+s+1,(strc-s)*sizeof(*strs));*/
+	memcpy(strs+s,strs+s+1,(strc-s)*sizeof(*strs));
 	
 }

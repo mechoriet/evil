@@ -1,0 +1,8 @@
+-~=. `Evil` IRC TTS Bot .=~-
+
+You can create multiple configs and specify them like -config=configa.json
+
+If the config doesn't exist, it will generate a fresh one.
+
+Simply create a shortcut to evil.exe, go into properties and add -config=different_config.json... or whatever  you like..........
+This way, you can easily change Evil TTS Settings :)

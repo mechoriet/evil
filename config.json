@@ -1,19 +1,23 @@
 {
-	"IRC Setup": {
+	"IRC Settings": {
 		"server": "irc.twitch.tv",
-        "port (remove these parentheses to use)": 6667,
-		"username": "guy",
-		"channel": "#guy",
+		"port (remove these parentheses to use)": 6667,
+		"username": "you",
+		"channel": "#you",
 		"password": "oauth:4ncjgxxxxxxx, get yours at http://www.twitchapps.com/tmi"
 	},
-    
-    "TTS Settings": {
-        "Wait Between; 4s +": 0,
-        "Pronounce Names": 1,
-        "Standard Voice": "NIY"
-    },
-    
+	
+	"TTS Settings": {
+		"Wait Between; 4s +": 0,
+		"Pronounce Names": true,
+		"Name Voice": "Laura",
+		"Standard Voice": "WillBadGuy"
+	},
+	
 	"User Specific Voices": {
-		"Your Buddy": "WillBadGuy"
-	}
+		"buddy": "WillBadGuy",
+		"guy": "WillUpClose"
+	},
+	
+	"Choose from these voices (this field is not used by evil.exe)": "Will, WillBadGuy, WillFromAfar, WillHappy, WillLittleCreature, WillOldMan, WillSad, WillUpClose"
 }
